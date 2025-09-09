@@ -57,6 +57,8 @@ The application has the following services:
 | `virtual-customer` | Simulates order creation on a scheduled basis (Rust) |
 | `virtual-worker` | Simulates order completion on a scheduled basis (Rust) |
 | `ai-service` | Optional service for adding generative text and graphics creation (Python) |
+| `store-front-mcp` | MCP server exposing store-front functionality as AI assistant tools (Python) |
+| `store-admin-mcp` | MCP server exposing store-admin functionality as AI assistant tools (Python) |
 | `mongodb` | MongoDB instance for persisted data |
 | `rabbitmq` | RabbitMQ for an order queue |
 
@@ -141,6 +143,44 @@ This repo also includes [DevContainer configuration](./.devcontainer/devcontaine
 ## Deploy the app to Azure using Azure Developer CLI
 
 See the [Azure Developer CLI](./docs/azd.md) documentation for instructions on how to quickly deploy the app to Azure.
+
+## MCP Servers
+
+This repository includes Model Context Protocol (MCP) servers that expose the store functionality as tools for AI assistants. The MCP servers are located in the [`mcp-servers/`](./mcp-servers/) directory.
+
+### Available MCP Servers
+
+- **Store Front MCP Server** (`store_front_server.py`) - Provides tools for customer shopping workflows:
+  - Browse products
+  - Manage shopping cart
+  - Submit orders
+
+- **Store Admin MCP Server** (`store_admin_server.py`) - Provides tools for administrative tasks:
+  - Product management (create, read, update, delete)
+  - Order management and processing
+  - AI-powered product description generation
+  - Order analytics and statistics
+
+### Quick Start
+
+1. Install dependencies:
+   ```bash
+   cd mcp-servers
+   pip install -r requirements.txt
+   ```
+
+2. Run the servers:
+   ```bash
+   # Store front server
+   python store_front_server.py
+   
+   # Store admin server  
+   python store_admin_server.py
+   ```
+
+3. Use with any MCP-compatible AI assistant or client.
+
+For detailed documentation, see the [MCP Servers README](./mcp-servers/README.md).
 
 ## Additional Resources
 

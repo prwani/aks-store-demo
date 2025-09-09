@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  store-front-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.store-front
+    ports:
+      - "8100:8100"
+    environment:
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - ORDER_SERVICE_URL=http://order-service:3000
+    depends_on:
+      - product-service
+      - order-service
+    networks:
+      - aks-store-network
+
+  store-admin-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.store-admin  
+    ports:
+      - "8101:8101"
+    environment:
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - ORDER_SERVICE_URL=http://order-service:3000
+      - MAKELINE_SERVICE_URL=http://makeline-service:3001
+      - AI_SERVICE_URL=http://ai-service:5001
+    depends_on:
+      - product-service
+      - order-service
+      - makeline-service
+      - ai-service
+    networks:
+      - aks-store-network
+
+networks:
+  aks-store-network:
+    external: true
