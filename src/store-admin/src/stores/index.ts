@@ -42,5 +42,31 @@ export const useOrderStore = defineStore('order', () => {
     orders.value.splice(index, 1)
   }
 
-  return { orders, count, initialized, addOrders, addOrder, removeOrder }
+  // Shared by the "Complete Order" button (OrderDetailView) and the
+  // update_order_status WebMCP tool, so both paths hit the same makeline
+  // API call and update the same reactive `orders` state.
+  const updateOrderStatus = async (orderId: string | number, status: number): Promise<Order> => {
+    const foundOrder = orders.value.find((o) => o.orderId == orderId)
+    if (!foundOrder) {
+      throw new Error(`Order ${orderId} not found`)
+    }
+
+    const updatedOrder = { ...foundOrder, status }
+    const response = await fetch('/api/makeline/order', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedOrder),
+    })
+
+    if (!response.ok) {
+      throw new Error('Error occurred while processing order')
+    }
+
+    // The makeline service removes completed orders from the pending
+    // queue, so mirror that locally the same way the UI button does.
+    removeOrder(foundOrder)
+    return updatedOrder
+  }
+
+  return { orders, count, initialized, addOrders, addOrder, removeOrder, updateOrderStatus }
 })

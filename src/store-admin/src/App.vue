@@ -4,13 +4,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useProductStore, useOrderStore } from '@/stores'
 import type { Product, Order } from '@/types'
 import TopNav from './components/TopNav.vue'
+import { registerOrderTools } from '@/webmcp/tools'
 
 const productStore = useProductStore()
 const orderStore = useOrderStore()
+
+// Orders (like the order list itself) are relevant across the whole admin
+// app, so order tools are registered once for the app's lifetime here.
+const webMcpController = new AbortController()
 
 onMounted(() => {
   if (productStore.count === 0) {
@@ -40,6 +45,12 @@ onMounted(() => {
         console.error(`Error occurred while fetching orders`, error)
       })
   }
+
+  registerOrderTools(webMcpController.signal)
+})
+
+onUnmounted(() => {
+  webMcpController.abort()
 })
 </script>
 

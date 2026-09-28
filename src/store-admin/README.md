@@ -60,3 +60,28 @@ When the app is running, you should see output similar to the following:
 ```
 
 Open a browser and navigate to `http://localhost:8081/`. You should see the store admin app running.
+
+## WebMCP tools
+
+This app registers [WebMCP](https://github.com/webmachinelearning/webmcp)
+tools (`document.modelContext.registerTool`) so a browser-integrated AI agent
+can act on the admin portal using the same store actions/API calls the UI
+buttons use. Registration is feature-detected and a no-op in browsers
+without WebMCP support (native support currently requires Chrome/Edge with
+the WebMCP Origin Trial or the local `#enable-webmcp-testing` flag). See
+`src/webmcp/tools.ts`.
+
+| Tool | Description |
+| --- | --- |
+| `list_orders` | Lists orders, optionally filtered by status. |
+| `get_order` | Returns full item/price details for one order. |
+| `update_order_status` | Updates an order's status (same as the "Complete Order" button). |
+| `create_product` | Creates a new product (same as "Save Product" on the Add Product page). |
+| `update_product` | Updates an existing product (same as "Save Product" on the Edit Product page). |
+| `delete_product` | Permanently deletes a product. Destructive/irreversible — treated as higher-risk. |
+
+> **Note:** this app currently has no authentication/authorization guard on
+> any UI action (there is no auth code anywhere in store-admin). The
+> `create_product`/`update_product`/`delete_product` tools intentionally
+> mirror that existing (unguarded) behavior rather than introducing new
+> gating that the UI itself doesn't have.

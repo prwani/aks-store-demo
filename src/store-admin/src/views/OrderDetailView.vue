@@ -93,31 +93,16 @@ const completeOrder = () => {
   if (order.value) {
     console.log(`Completing order ${order.value?.orderId}`)
 
-    const foundOrder = orderStore.orders.find((o) => o.orderId == order.value?.orderId)
-
-    if (foundOrder) {
-      foundOrder.status = 1
-      fetch(`/api/makeline/order`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(foundOrder),
+    orderStore
+      .updateOrderStatus(order.value.orderId as string | number, 1)
+      .then(() => {
+        alert('Order successfully processed')
+        router.push('/')
       })
-        .then((response) => {
-          if (response.ok) {
-            orderStore.removeOrder(foundOrder)
-            alert('Order successfully processed')
-            router.push('/')
-          } else {
-            alert('Error occurred while processing order')
-          }
-        })
-        .catch((error) => {
-          console.log(error)
-          alert('Error occurred while processing order')
-        })
-    }
+      .catch((error) => {
+        console.log(error)
+        alert('Error occurred while processing order')
+      })
   }
 }
 </script>

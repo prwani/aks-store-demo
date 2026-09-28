@@ -115,29 +115,10 @@ const continueShopping = () => {
 };
 
 const submitOrder = () => {
-  const order = {
-    customerId: Math.floor(Math.random() * 10000000000).toString(),
-    items: cartItems.value.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
-      price: item.product.price,
-    })),
-  };
-
-  fetch("/api/orders", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(order),
-  })
-    .then((response) => {
-      if (response.ok) {
-        cartStore.clear();
-        alert("Order submitted successfully");
-      } else {
-        alert("Error occurred while submitting order");
-      }
+  cartStore
+    .checkout()
+    .then(() => {
+      alert("Order submitted successfully");
     })
     .catch((error) => {
       console.error("Error submitting order:", error);
