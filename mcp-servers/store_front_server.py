@@ -35,7 +35,7 @@ async def get_products() -> List[Dict[str, Any]]:
     """
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{PRODUCT_SERVICE_URL}/products")
+            response = await client.get(f"{PRODUCT_SERVICE_URL}/")
             response.raise_for_status()
             products = response.json()
             return products
@@ -46,19 +46,21 @@ async def get_products() -> List[Dict[str, Any]]:
 
 
 @mcp.tool()
-async def get_product_by_id(product_id: str) -> Dict[str, Any]:
+async def get_product_by_id(product_id: int) -> Dict[str, Any]:
     """
     Get details of a specific product by its ID.
     
     Args:
-        product_id: The unique identifier of the product
+        product_id: The numeric identifier of the product
         
     Returns:
         Product details including id, name, price, description, image, etc.
     """
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{PRODUCT_SERVICE_URL}/product/{product_id}")
+            response = await client.get(f"{PRODUCT_SERVICE_URL}/{product_id}")
+            if response.status_code == 404:
+                return {"error": f"Product {product_id} not found"}
             response.raise_for_status()
             product = response.json()
             return product
@@ -69,7 +71,7 @@ async def get_product_by_id(product_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def add_to_cart(product_id: str, quantity: int = 1) -> Dict[str, Any]:
+async def add_to_cart(product_id: int, quantity: int = 1) -> Dict[str, Any]:
     """
     Add a product to the shopping cart.
     
@@ -135,7 +137,7 @@ async def view_cart() -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def remove_from_cart(product_id: str) -> Dict[str, Any]:
+async def remove_from_cart(product_id: int) -> Dict[str, Any]:
     """
     Remove a product from the shopping cart.
     
@@ -164,7 +166,7 @@ async def remove_from_cart(product_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def update_cart_quantity(product_id: str, quantity: int) -> Dict[str, Any]:
+async def update_cart_quantity(product_id: int, quantity: int) -> Dict[str, Any]:
     """
     Update the quantity of a specific product in the cart.
     
@@ -248,10 +250,10 @@ async def submit_order(customer_id: Optional[str] = None) -> Dict[str, Any]:
             ]
         }
         
-        # Submit order to order service
+        # Submit order to order service (order-service accepts the order at its root path)
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{ORDER_SERVICE_URL}/orders",
+                f"{ORDER_SERVICE_URL}/",
                 json=order_data,
                 headers={"Content-Type": "application/json"}
             )

@@ -34,7 +34,7 @@ async def get_all_products() -> List[Dict[str, Any]]:
     """
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{PRODUCT_SERVICE_URL}/products")
+            response = await client.get(f"{PRODUCT_SERVICE_URL}/")
             response.raise_for_status()
             products = response.json()
             return products
@@ -45,19 +45,21 @@ async def get_all_products() -> List[Dict[str, Any]]:
 
 
 @mcp.tool()
-async def get_product(product_id: str) -> Dict[str, Any]:
+async def get_product(product_id: int) -> Dict[str, Any]:
     """
     Get details of a specific product for admin management.
     
     Args:
-        product_id: The unique identifier of the product
+        product_id: The numeric identifier of the product
         
     Returns:
         Complete product details
     """
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{PRODUCT_SERVICE_URL}/product/{product_id}")
+            response = await client.get(f"{PRODUCT_SERVICE_URL}/{product_id}")
+            if response.status_code == 404:
+                return {"error": f"Product {product_id} not found"}
             response.raise_for_status()
             product = response.json()
             return product
@@ -72,20 +74,19 @@ async def create_product(
     name: str,
     price: float,
     description: str,
-    image: str = "",
-    category: str = "",
-    tags: Optional[List[str]] = None
+    image: str = ""
 ) -> Dict[str, Any]:
     """
     Create a new product in the catalog.
+    
+    The product-service assigns the new product's id; it does not accept
+    an id, category, or tags field.
     
     Args:
         name: Product name
         price: Product price
         description: Product description
         image: Product image URL (optional)
-        category: Product category (optional)
-        tags: List of product tags (optional)
         
     Returns:
         Created product details or error message
@@ -95,14 +96,12 @@ async def create_product(
             "name": name,
             "price": price,
             "description": description,
-            "image": image or "",
-            "category": category or "",
-            "tags": tags or []
+            "image": image or ""
         }
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{PRODUCT_SERVICE_URL}/product",
+                f"{PRODUCT_SERVICE_URL}/",
                 json=product_data,
                 headers={"Content-Type": "application/json"}
             )
@@ -120,54 +119,47 @@ async def create_product(
 
 @mcp.tool()
 async def update_product(
-    product_id: str,
+    product_id: int,
     name: Optional[str] = None,
     price: Optional[float] = None,
     description: Optional[str] = None,
-    image: Optional[str] = None,
-    category: Optional[str] = None,
-    tags: Optional[List[str]] = None
+    image: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Update an existing product in the catalog.
     
+    product-service's update endpoint replaces the whole product record
+    (matched by id), so this reads the current product first and merges
+    in only the fields that were provided.
+    
     Args:
-        product_id: The unique identifier of the product to update
+        product_id: The numeric identifier of the product to update
         name: New product name (optional)
         price: New product price (optional)
         description: New product description (optional)
         image: New product image URL (optional)
-        category: New product category (optional)
-        tags: New list of product tags (optional)
         
     Returns:
         Updated product details or error message
     """
     try:
-        # First get the existing product
+        # First get the existing product, since the API requires the full record
         existing_product = await get_product(product_id)
         if "error" in existing_product:
             return existing_product
         
-        # Update only provided fields
-        update_data = {}
-        if name is not None:
-            update_data["name"] = name
-        if price is not None:
-            update_data["price"] = price
-        if description is not None:
-            update_data["description"] = description
-        if image is not None:
-            update_data["image"] = image
-        if category is not None:
-            update_data["category"] = category
-        if tags is not None:
-            update_data["tags"] = tags
+        updated_data = {
+            "id": product_id,
+            "name": name if name is not None else existing_product["name"],
+            "price": price if price is not None else existing_product["price"],
+            "description": description if description is not None else existing_product["description"],
+            "image": image if image is not None else existing_product["image"]
+        }
         
         async with httpx.AsyncClient() as client:
             response = await client.put(
-                f"{PRODUCT_SERVICE_URL}/product/{product_id}",
-                json=update_data,
+                f"{PRODUCT_SERVICE_URL}/",
+                json=updated_data,
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
@@ -183,19 +175,19 @@ async def update_product(
 
 
 @mcp.tool()
-async def delete_product(product_id: str) -> Dict[str, Any]:
+async def delete_product(product_id: int) -> Dict[str, Any]:
     """
     Delete a product from the catalog.
     
     Args:
-        product_id: The unique identifier of the product to delete
+        product_id: The numeric identifier of the product to delete
         
     Returns:
         Confirmation message or error
     """
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.delete(f"{PRODUCT_SERVICE_URL}/product/{product_id}")
+            response = await client.delete(f"{PRODUCT_SERVICE_URL}/{product_id}")
             response.raise_for_status()
             return {
                 "message": f"Successfully deleted product: {product_id}"
@@ -232,7 +224,7 @@ async def get_order(order_id: str) -> Dict[str, Any]:
     Get details of a specific order.
     
     Args:
-        order_id: The unique identifier of the order
+        order_id: The numeric identifier of the order (as a string)
         
     Returns:
         Complete order details
@@ -250,31 +242,38 @@ async def get_order(order_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def update_order_status(order_id: str, status: str) -> Dict[str, Any]:
+async def update_order_status(order_id: str, status: int) -> Dict[str, Any]:
     """
     Update the status of an order.
     
+    makeline-service's update endpoint takes the whole order object at
+    PUT /order (no id in the path), so this reads the current order first
+    and PUTs it back with the new status.
+    
     Args:
-        order_id: The unique identifier of the order
-        status: New status (e.g., "pending", "processing", "completed", "cancelled")
+        order_id: The numeric identifier of the order (as a string)
+        status: New status code: 0 = Pending, 1 = Processing/Completed, 2 = Complete
         
     Returns:
         Updated order details or error message
     """
     try:
-        update_data = {"status": status}
+        existing_order = await get_order(order_id)
+        if "error" in existing_order:
+            return existing_order
+        
+        existing_order["status"] = status
         
         async with httpx.AsyncClient() as client:
             response = await client.put(
-                f"{MAKELINE_SERVICE_URL}/order/{order_id}",
-                json=update_data,
+                f"{MAKELINE_SERVICE_URL}/order",
+                json=existing_order,
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
-            updated_order = response.json()
             return {
                 "message": f"Successfully updated order {order_id} status to {status}",
-                "order": updated_order
+                "order": existing_order
             }
     except httpx.RequestError as e:
         return {"error": f"Failed to update order status: {str(e)}"}
@@ -285,50 +284,45 @@ async def update_order_status(order_id: str, status: str) -> Dict[str, Any]:
 @mcp.tool()
 async def process_order(order_id: str) -> Dict[str, Any]:
     """
-    Process an order (mark as completed).
+    Process an order, mirroring the "Complete Order" action in store-admin,
+    which sets the order status to 1.
     
     Args:
-        order_id: The unique identifier of the order to process
+        order_id: The numeric identifier of the order to process
         
     Returns:
         Processing confirmation or error message
     """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.put(f"{MAKELINE_SERVICE_URL}/order/{order_id}/process")
-            response.raise_for_status()
-            processed_order = response.json()
-            return {
-                "message": f"Successfully processed order: {order_id}",
-                "order": processed_order
-            }
-    except httpx.RequestError as e:
-        return {"error": f"Failed to process order: {str(e)}"}
-    except Exception as e:
-        return {"error": f"Unexpected error: {str(e)}"}
+    result = await update_order_status(order_id, 1)
+    if "error" in result:
+        return result
+    return {
+        "message": f"Successfully processed order: {order_id}",
+        "order": result.get("order")
+    }
 
 
 @mcp.tool()
-async def generate_product_description(product_name: str, features: Optional[List[str]] = None) -> Dict[str, Any]:
+async def generate_product_description(product_name: str, tags: Optional[List[str]] = None) -> Dict[str, Any]:
     """
-    Generate an AI-powered product description.
+    Generate an AI-powered product description using the ai-service.
     
     Args:
         product_name: Name of the product
-        features: List of product features to highlight (optional)
+        tags: List of tags/features to highlight in the description (optional)
         
     Returns:
         Generated product description or error message
     """
     try:
         request_data = {
-            "productName": product_name,
-            "features": features or []
+            "name": product_name,
+            "tags": tags or []
         }
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{AI_SERVICE_URL}/ai/generate/description",
+                f"{AI_SERVICE_URL}/generate/description",
                 json=request_data,
                 headers={"Content-Type": "application/json"}
             )

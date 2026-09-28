@@ -41,7 +41,7 @@ python store_front_server.py
 
 **Available Tools:**
 - `get_products()` - Fetch all available products
-- `get_product_by_id(product_id)` - Get details of a specific product
+- `get_product_by_id(product_id)` - Get details of a specific product (numeric id)
 - `add_to_cart(product_id, quantity)` - Add items to shopping cart
 - `view_cart()` - View current cart contents and total
 - `remove_from_cart(product_id)` - Remove items from cart
@@ -61,20 +61,20 @@ python store_admin_server.py
 
 *Product Management:*
 - `get_all_products()` - Fetch all products for management
-- `get_product(product_id)` - Get specific product details
-- `create_product(name, price, description, ...)` - Create new products
+- `get_product(product_id)` - Get specific product details (numeric id)
+- `create_product(name, price, description, image?)` - Create new products
 - `update_product(product_id, ...)` - Update existing products
 - `delete_product(product_id)` - Delete products
 
 *Order Management:*
 - `get_all_orders()` - Fetch all orders
 - `get_order(order_id)` - Get specific order details
-- `update_order_status(order_id, status)` - Update order status
-- `process_order(order_id)` - Mark order as completed
+- `update_order_status(order_id, status)` - Update order status (0=Pending, 1=Processing/Completed, 2=Complete)
+- `process_order(order_id)` - Mark order as processed (sets status to 1, matching the "Complete Order" button in store-admin)
 - `get_order_statistics()` - Get order analytics
 
 *AI Features:*
-- `generate_product_description(product_name, features?)` - AI-generated descriptions
+- `generate_product_description(product_name, tags?)` - AI-generated descriptions
 - `check_ai_service_health()` - Check AI service availability
 
 ## Usage with MCP Clients
@@ -93,7 +93,7 @@ mcp connect stdio python store_admin_server.py
 
 ### Customer Shopping Flow (Store Front)
 1. `get_products()` - Browse available products
-2. `add_to_cart("product-123", 2)` - Add items to cart
+2. `add_to_cart(123, 2)` - Add items to cart
 3. `view_cart()` - Review cart contents
 4. `submit_order()` - Place the order
 
@@ -101,13 +101,13 @@ mcp connect stdio python store_admin_server.py
 1. `get_all_products()` - View current inventory
 2. `create_product("New Pet Toy", 19.99, "Fun toy for cats")` - Add new product
 3. `generate_product_description("New Pet Toy", ["interactive", "durable"])` - Generate AI description
-4. `update_product("product-123", description="AI generated description")` - Update with AI content
+4. `update_product(123, description="AI generated description")` - Update with AI content
 
 ### Order Processing (Store Admin)
 1. `get_all_orders()` - View pending orders
-2. `get_order("order-456")` - Check order details
-3. `update_order_status("order-456", "processing")` - Update status
-4. `process_order("order-456")` - Complete the order
+2. `get_order("456")` - Check order details
+3. `update_order_status("456", 1)` - Update status
+4. `process_order("456")` - Complete the order
 
 ## Configuration
 
