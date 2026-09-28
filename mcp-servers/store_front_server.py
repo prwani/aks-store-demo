@@ -14,8 +14,14 @@ import httpx
 from typing import List, Dict, Any, Optional
 from mcp.server import FastMCP
 
-# Initialize the FastMCP server
-mcp = FastMCP("Store Front")
+# Initialize the FastMCP server. Bind to 0.0.0.0 so the streamable-http
+# transport is reachable from outside the container/pod, not just localhost.
+mcp = FastMCP(
+    "Store Front",
+    host="0.0.0.0",
+    port=int(os.getenv("PORT", "8100")),
+    stateless_http=True,
+)
 
 # Configuration
 PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://localhost:3002")
@@ -282,5 +288,6 @@ async def submit_order(customer_id: Optional[str] = None) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Run the MCP server
-    mcp.run()
+    # Run the MCP server over streamable HTTP so it can be reached as a
+    # network service (e.g. from Copilot Studio / M365 Copilot), not stdio.
+    mcp.run(transport="streamable-http")
