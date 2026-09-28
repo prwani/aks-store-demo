@@ -43,3 +43,22 @@ When the app is running, you should see output similar to the following:
 ```
 
 Open a browser and navigate to `http://localhost:8080/`. You should see the store front app running.
+
+## WebMCP tools
+
+This app registers [WebMCP](https://github.com/webmachinelearning/webmcp)
+tools (`document.modelContext.registerTool`) so a browser-integrated AI agent
+can act on the store using the same store actions the UI buttons use.
+Registration is feature-detected and a no-op in browsers without WebMCP
+support (native support currently requires Chrome/Edge with the WebMCP Origin
+Trial or the local `#enable-webmcp-testing` flag). See `src/webmcp/tools.ts`.
+
+| Tool | Description |
+| --- | --- |
+| `search_products` | Searches (or lists, if no query) the product catalog. |
+| `get_product_details` | Returns full details for one product ID. |
+| `get_cart` | Returns the current cart contents and total. |
+| `add_to_cart` | Adds a quantity of a product to the cart. |
+| `update_cart_item` | Changes the quantity of a product already in the cart. |
+| `remove_from_cart` | Removes a product from the cart. |
+| `checkout` | Submits the cart as an order and clears it (same as the "Proceed to Checkout" button). |

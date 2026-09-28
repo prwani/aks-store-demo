@@ -35,9 +35,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useProductStore } from '@/stores'
 import { useRouter } from 'vue-router'
+import { registerProductDeleteTool } from '@/webmcp/tools'
 
 const productStore = useProductStore()
 const router = useRouter()
@@ -47,6 +48,16 @@ const products = computed(() => productStore.products)
 const navigateToProduct = (productId: string | number) => {
   router.push(`/product/${productId}`)
 }
+
+const webMcpController = new AbortController()
+
+onMounted(() => {
+  registerProductDeleteTool(webMcpController.signal)
+})
+
+onUnmounted(() => {
+  webMcpController.abort()
+})
 </script>
 
 <style scoped>

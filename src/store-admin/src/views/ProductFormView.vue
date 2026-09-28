@@ -104,15 +104,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores'
+import { useProductActions } from '@/composables/useProductActions'
+import { registerProductFormTools } from '@/webmcp/tools'
 import type { Product } from '@/types'
 
 const aiServiceUrl = '/api/ai'
-const productServiceUrl = '/api/product'
 
 const productStore = useProductStore()
+const { createProduct, updateProduct } = useProductActions()
 const route = useRoute()
 const router = useRouter()
 
@@ -250,32 +252,14 @@ const saveProduct = (): void => {
     showValidationErrors.value = false
   }
 
-  // default to updates
-  let method = 'PUT'
-
   // get the path of the current request
   const path = route.path
-  if (path.includes('add')) {
-    method = 'POST'
-  }
+  const isAdd = path.includes('add')
+  const save = isAdd ? createProduct(product.value) : updateProduct(product.value)
 
-  // upsert the product
-  fetch(`${productServiceUrl}`, {
-    method: method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(product.value),
-  })
-    .then((response) => response.json())
+  save
     .then((data) => {
       alert('Product saved successfully')
-      // update or add the product to the list
-      if (method === 'PUT') {
-        productStore.updateProduct(data)
-      } else {
-        productStore.addProduct(data)
-      }
       router.push(`/product/${data.id}`)
     })
     .catch((error) => {
@@ -283,6 +267,8 @@ const saveProduct = (): void => {
       alert('Error occurred while saving product')
     })
 }
+
+const webMcpController = new AbortController()
 
 onMounted(() => {
   if (route.params.id && route.params.id !== 'add') {
@@ -309,6 +295,12 @@ onMounted(() => {
       console.log('error occurred when evaluating ai service health')
       console.log(error)
     })
+
+  registerProductFormTools(webMcpController.signal)
+})
+
+onUnmounted(() => {
+  webMcpController.abort()
 })
 </script>
 
