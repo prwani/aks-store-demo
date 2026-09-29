@@ -64,4 +64,4 @@ spec:
       name: http
   selector:
     app: store-admin-mcp
-  type: LoadBalancer
+  type: ClusterIP

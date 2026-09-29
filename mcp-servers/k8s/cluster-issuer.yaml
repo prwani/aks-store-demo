@@ -1,0 +1,9 @@
+# Self-signed issuer: certs are generated entirely in-cluster by cert-manager,
+# with no calls to any external CA/service (e.g. Let's Encrypt). Suitable for
+# testing HTTPS locally; clients will need to trust/ignore the self-signed cert.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}

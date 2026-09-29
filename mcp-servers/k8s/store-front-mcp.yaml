@@ -60,4 +60,4 @@ spec:
       name: http
   selector:
     app: store-front-mcp
-  type: LoadBalancer
+  type: ClusterIP
