@@ -77,17 +77,18 @@ python store_admin_server.py
 - `generate_product_description(product_name, tags?)` - AI-generated descriptions
 - `check_ai_service_health()` - Check AI service availability
 
+## Transport
+
+Both servers run over **Streamable HTTP** (not stdio), so they can be deployed as
+regular network services. Each server binds `0.0.0.0` on the port from the `PORT`
+env var (default `8100` for store-front, `8101` for store-admin) and serves the
+MCP endpoint at `/mcp`.
+
 ## Usage with MCP Clients
 
-These servers can be used with any MCP-compatible client. For example, with the MCP CLI:
-
-```bash
-# Connect to store front server
-mcp connect stdio python store_front_server.py
-
-# Connect to store admin server  
-mcp connect stdio python store_admin_server.py
-```
+These servers can be used with any MCP-compatible client that supports Streamable
+HTTP, by pointing the client at `http://<host>:<port>/mcp` (or the HTTPS URL if
+deployed behind TLS, see [Deployment](#deployment) below).
 
 ## Example Workflows
 
@@ -138,6 +139,49 @@ Successful responses include relevant data and confirmation messages.
 - The servers communicate with the backend microservices via HTTP APIs
 - AI features require the ai-service to be running and configured with API keys
 - All monetary values are handled as floats and formatted with appropriate currency symbols
+
+## Deployment
+
+Container images are built with `Dockerfile.store-front` / `Dockerfile.store-admin`
+and can be built remotely with `az acr build` (no local Docker required):
+
+```bash
+az acr build --registry <acr-name> --image aks-store-demo/store-front-mcp:latest \
+  --file mcp-servers/Dockerfile.store-front mcp-servers
+az acr build --registry <acr-name> --image aks-store-demo/store-admin-mcp:latest \
+  --file mcp-servers/Dockerfile.store-admin mcp-servers
+```
+
+Kubernetes manifests to run both servers in the same `pets` namespace as the rest
+of the app, wired to the in-cluster backend services, are under
+[`mcp-servers/k8s`](./k8s):
+
+- `store-front-mcp.yaml` / `store-admin-mcp.yaml` — Deployment + ClusterIP Service
+- `cluster-issuer.yaml` — a cert-manager self-signed `ClusterIssuer` (used only for
+  the internal ingress TLS listener; no external ACME/Let's Encrypt calls)
+- `ingress.yaml` — ingress-nginx `Ingress` resources exposing each server at
+  `https://<server>.<ingress-ip>.nip.io/mcp` (self-signed cert, `ssl-redirect`
+  disabled so plain HTTP is also available for internal/edge-terminated TLS
+  scenarios)
+
+```bash
+kubectl apply -f mcp-servers/k8s/store-front-mcp.yaml -f mcp-servers/k8s/store-admin-mcp.yaml
+kubectl apply -f mcp-servers/k8s/cluster-issuer.yaml -f mcp-servers/k8s/ingress.yaml
+```
+
+### Public HTTPS endpoint (Azure Front Door)
+
+For a publicly trusted TLS certificate (needed for registering these servers as
+tools in Copilot Studio / M365 Copilot), an Azure Front Door Standard profile sits
+in front of the ingress-nginx controller's public IP and terminates TLS with a
+Microsoft-managed certificate on the default `*.azurefd.net` hostname — no
+custom domain or third-party CA (e.g. Let's Encrypt) is involved:
+
+- `https://<store-front-endpoint>.azurefd.net/mcp`
+- `https://<store-admin-endpoint>.azurefd.net/mcp`
+
+Front Door forwards to the ingress-nginx origin over plain HTTP (`ssl-redirect`
+disabled on the ingress), so TLS is only terminated once, at the Front Door edge.
 
 ## Architecture
 
