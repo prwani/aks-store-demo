@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: store-admin-mcp
+  namespace: pets
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: store-admin-mcp
+  template:
+    metadata:
+      labels:
+        app: store-admin-mcp
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: store-admin-mcp
+          image: acrstoredemodevstork70.azurecr.io/aks-store-demo/store-admin-mcp:latest
+          ports:
+            - containerPort: 8101
+              name: mcp
+          env:
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:3002"
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:3000"
+            - name: MAKELINE_SERVICE_URL
+              value: "http://makeline-service:3001"
+            - name: AI_SERVICE_URL
+              value: "http://ai-service:5001"
+            - name: PORT
+              value: "8101"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8101
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8101
+            failureThreshold: 5
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: store-admin-mcp
+  namespace: pets
+spec:
+  ports:
+    - port: 80
+      targetPort: 8101
+      name: http
+  selector:
+    app: store-admin-mcp
+  type: LoadBalancer
