@@ -7,7 +7,11 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install app dependencies
-RUN npm install
+RUN npm install \
+    # Some build environments (e.g. ACR Tasks) don't preserve the executable
+    # bit on node_modules/.bin scripts such as run-p; restore it explicitly so
+    # `npm run build` can invoke them.
+    && chmod -R a+x node_modules/.bin
 
 # Copy the rest of the app source code to the container
 COPY . .
