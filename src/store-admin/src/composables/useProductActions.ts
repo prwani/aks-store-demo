@@ -1,4 +1,5 @@
 import { useProductStore } from '@/stores'
+import { authFetch } from '@/auth'
 import type { Product } from '@/types'
 
 const productServiceUrl = '/api/product'
@@ -16,7 +17,7 @@ export function useProductActions() {
   const productStore = useProductStore()
 
   async function createProduct(product: Product): Promise<Product> {
-    const response = await fetch(productServiceUrl, {
+    const response = await authFetch(productServiceUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(product),
@@ -30,7 +31,7 @@ export function useProductActions() {
   }
 
   async function updateProduct(product: Product): Promise<Product> {
-    const response = await fetch(productServiceUrl, {
+    const response = await authFetch(productServiceUrl, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(product),
@@ -44,7 +45,7 @@ export function useProductActions() {
   }
 
   async function deleteProduct(productId: string | number): Promise<void> {
-    const response = await fetch(`${productServiceUrl}/${productId}`, {
+    const response = await authFetch(`${productServiceUrl}/${productId}`, {
       method: 'DELETE',
     })
     if (!response.ok) {

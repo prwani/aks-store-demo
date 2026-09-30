@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Product, CartItem } from '@/types'
+import { authFetch } from '@/auth'
 
 export const useProductStore = defineStore('product', () => {
   const products = ref<Product[]>([])
@@ -53,7 +54,7 @@ export const useCartStore = defineStore('cart', () => {
       })),
     }
 
-    const response = await fetch('/api/orders', {
+    const response = await authFetch('/api/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

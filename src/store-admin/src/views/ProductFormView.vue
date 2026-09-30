@@ -110,6 +110,7 @@ import { useProductStore } from '@/stores'
 import { useProductActions } from '@/composables/useProductActions'
 import { registerProductFormTools } from '@/webmcp/tools'
 import type { Product } from '@/types'
+import { authFetch } from '@/auth'
 
 const aiServiceUrl = '/api/ai'
 
@@ -176,7 +177,7 @@ const generateDescription = (): void => {
 
   product.value.description = ''
 
-  fetch(`${aiServiceUrl}/generate/description`, {
+  authFetch(`${aiServiceUrl}/generate/description`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -211,7 +212,7 @@ const generateImage = (): void => {
     description: product.value.description,
   }
 
-  fetch(`${aiServiceUrl}/generate/image`, {
+  authFetch(`${aiServiceUrl}/generate/image`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -281,7 +282,7 @@ onMounted(() => {
     }
   }
 
-  fetch(`${aiServiceUrl}/health`)
+  authFetch(`${aiServiceUrl}/health`)
     .then((response) => response.json())
     .then((data) => {
       if (data.status === 'ok') {

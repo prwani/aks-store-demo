@@ -10,6 +10,7 @@
       <li><router-link to="/orders" @click="closeNav">Orders</router-link></li>
       <li><router-link to="/products" @click="closeNav">Products</router-link></li>
     </ul>
+    <button class="logout" @click="onLogout">Sign out</button>
     <button class="hamburger" @click="toggleNav">
       <span class="hamburger-icon"></span>
     </button>
@@ -18,7 +19,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { logout } from '@/auth'
 
+const router = useRouter()
 const isNavOpen = ref(false)
 
 function toggleNav(): void {
@@ -28,9 +32,25 @@ function toggleNav(): void {
 function closeNav(): void {
   isNavOpen.value = false
 }
+
+function onLogout(): void {
+  closeNav()
+  logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
+.logout {
+  background: none;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.75rem;
+}
+
 nav {
   display: flex;
   justify-content: space-between;
