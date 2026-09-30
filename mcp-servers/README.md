@@ -21,12 +21,16 @@ The MCP servers provide a programmatic interface to interact with the store demo
 pip install -r requirements.txt
 ```
 
-2. Set up environment variables (optional, will use defaults if not set):
+2. Set up environment variables (backend URLs are optional and fall back to the defaults below, the authentication credentials are required):
 ```bash
 export PRODUCT_SERVICE_URL=http://localhost:3002
 export ORDER_SERVICE_URL=http://localhost:3000
 export MAKELINE_SERVICE_URL=http://localhost:3001
 export AI_SERVICE_URL=http://localhost:5001
+
+# HTTP Basic authentication credentials (required)
+export MCP_AUTH_USERNAME=<your-username>
+export MCP_AUTH_PASSWORD=<your-password>
 ```
 
 ## Running the Servers
@@ -84,11 +88,41 @@ regular network services. Each server binds `0.0.0.0` on the port from the `PORT
 env var (default `8100` for store-front, `8101` for store-admin) and serves the
 MCP endpoint at `/mcp`.
 
+## Authentication
+
+Both servers are protected with **HTTP Basic authentication**. Every request to
+`/mcp` must include an `Authorization: Basic <base64(username:password)>` header;
+requests without valid credentials get `401 Unauthorized` with a
+`WWW-Authenticate: Basic` challenge. Health/probe paths (`/health`, `/healthz`,
+`/readyz`) stay open so Kubernetes probes keep working.
+
+Credentials come from `MCP_AUTH_USERNAME` / `MCP_AUTH_PASSWORD`. Authentication
+is on by default and the server refuses to start when the credentials are
+missing. For local development only, it can be turned off with
+`MCP_AUTH_ENABLED=false`.
+
+Quick check with curl:
+
+```bash
+curl -i -u "$MCP_AUTH_USERNAME:$MCP_AUTH_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+  http://localhost:8100/mcp
+```
+
+> Basic authentication sends credentials on every request, so always use it over
+> HTTPS (the deployment below terminates TLS at the ingress / Azure Front Door).
+
 ## Usage with MCP Clients
 
 These servers can be used with any MCP-compatible client that supports Streamable
 HTTP, by pointing the client at `http://<host>:<port>/mcp` (or the HTTPS URL if
-deployed behind TLS, see [Deployment](#deployment) below).
+deployed behind TLS, see [Deployment](#deployment) below) and supplying the Basic
+auth credentials.
+
+Step-by-step instructions for ChatGPT, Claude Desktop and Microsoft 365 Copilot
+are in [docs/mcp-clients.md](../docs/mcp-clients.md).
 
 ## Example Workflows
 
@@ -120,6 +154,10 @@ The servers support the following environment variables:
 | `ORDER_SERVICE_URL` | `http://localhost:3000` | Order service endpoint |
 | `MAKELINE_SERVICE_URL` | `http://localhost:3001` | Makeline service endpoint |
 | `AI_SERVICE_URL` | `http://localhost:5001` | AI service endpoint |
+| `MCP_AUTH_USERNAME` | _(none)_ | Username required for HTTP Basic authentication |
+| `MCP_AUTH_PASSWORD` | _(none)_ | Password required for HTTP Basic authentication |
+| `MCP_AUTH_ENABLED` | `true` | Set to `false` to disable authentication (local development only) |
+| `PORT` | `8100` / `8101` | Port the server listens on |
 
 ## Error Handling
 
@@ -163,6 +201,15 @@ of the app, wired to the in-cluster backend services, are under
   `https://<server>.<ingress-ip>.nip.io/mcp` (self-signed cert, `ssl-redirect`
   disabled so plain HTTP is also available for internal/edge-terminated TLS
   scenarios)
+
+Both deployments read their Basic auth credentials from a `mcp-auth` secret in the
+`pets` namespace, so create it before applying the manifests:
+
+```bash
+kubectl create secret generic mcp-auth --namespace pets \
+  --from-literal=username='<your-username>' \
+  --from-literal=password='<your-password>'
+```
 
 ```bash
 kubectl apply -f mcp-servers/k8s/store-front-mcp.yaml -f mcp-servers/k8s/store-admin-mcp.yaml
