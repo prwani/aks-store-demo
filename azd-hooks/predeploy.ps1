@@ -133,3 +133,16 @@ if ($env:AZURE_COSMOS_DATABASE_URI) {
 useMongoDB: false
 "@ | Out-File -FilePath custom-values.yaml -Append -Encoding utf8
 }
+
+###########################################################
+# Portal (store-front/store-admin) basic auth credentials
+###########################################################
+if ([string]::IsNullOrEmpty($env:AUTH_USERNAME) -or [string]::IsNullOrEmpty($env:AUTH_PASSWORD)) {
+  Write-Error "AUTH_USERNAME and AUTH_PASSWORD must be set - they are the credentials used to sign in to the store-front and store-admin portals. For example: azd env set AUTH_USERNAME <username>; azd env set AUTH_PASSWORD <password>"
+  exit 1
+}
+@"
+auth:
+  username: $($env:AUTH_USERNAME)
+  password: $($env:AUTH_PASSWORD)
+"@ | Out-File -FilePath custom-values.yaml -Append -Encoding utf8

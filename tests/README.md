@@ -39,6 +39,23 @@ tests/
 - **Execution Time**: 1-3 minutes per scenario
 - **Coverage**: Customer journey patterns, load testing, security validation
 
+## Portal authentication
+
+The `store-front` and `store-admin` portals require a sign-in (HTTP Basic
+credentials entered on the `/login` page, see the
+[root README](../README.md#authentication)). Tests that navigate straight to an
+app route are redirected to `/login`, so seed the session credentials before the
+first navigation, for example in a `beforeEach` hook:
+
+```ts
+await page.addInitScript(([key, token]) => {
+  sessionStorage.setItem(key, token)
+}, ['store-front-auth', Buffer.from(`${username}:${password}`).toString('base64')])
+```
+
+Use the `store-admin-auth` key for the admin portal. The credentials are the
+`AUTH_USERNAME`/`AUTH_PASSWORD` values the portals were deployed with.
+
 ## Available npm Scripts
 
 ### Store Front Tests
