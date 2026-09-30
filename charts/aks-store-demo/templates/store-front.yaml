@@ -20,6 +20,17 @@ spec:
         ports:
         - containerPort: 8080
           name: store-front
+        env:
+          - name: AUTH_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.auth.secretName }}
+                key: username
+          - name: AUTH_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.auth.secretName }}
+                key: password
         resources:
           requests:
             cpu: 1m

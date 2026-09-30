@@ -20,6 +20,17 @@ spec:
           ports:
             - containerPort: 8081
               name: store-admin
+          env:
+            - name: AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: store-auth
+                  key: username
+            - name: AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: store-auth
+                  key: password
           resources:
             requests:
               cpu: 1m

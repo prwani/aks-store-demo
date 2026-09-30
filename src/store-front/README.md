@@ -44,6 +44,41 @@ When the app is running, you should see output similar to the following:
 
 Open a browser and navigate to `http://localhost:8080/`. You should see the store front app running.
 
+## Authentication
+
+The app is protected with HTTP Basic authentication. The SPA shows a **login
+page** at `/login`; the credentials entered there are validated against the
+`/api/auth/login` endpoint and then sent as an `Authorization: Basic ...` header
+on every API call. nginx enforces the credentials server-side on all `/api/*`
+locations, so the API cannot be called without them. The "Sign out" button in
+the navigation bar clears the credentials (they are only kept for the browser
+session).
+
+The container reads the credentials from environment variables at start-up:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `AUTH_USERNAME` | _(none)_ | Username accepted by the portal (required) |
+| `AUTH_PASSWORD` | _(none)_ | Password accepted by the portal (required) |
+| `AUTH_REALM` | `Contoso Pet Store` | Realm name used in the auth challenge |
+| `AUTH_ENABLED` | `true` | Set to `false` to disable authentication (local development only) |
+
+The container fails to start when authentication is enabled and the credentials
+are missing. In Kubernetes the values come from the `store-auth` secret:
+
+```bash
+kubectl create secret generic store-auth -n pets \
+  --from-literal=username='<your-username>' \
+  --from-literal=password='<your-password>'
+```
+
+When running `npm run dev`, the Vite dev server validates the login form against
+`AUTH_USERNAME`/`AUTH_PASSWORD` if they are set, and accepts any credentials
+otherwise.
+
+> Basic credentials are sent on every request, so always serve the portal over
+> HTTPS outside of local development.
+
 ## WebMCP tools
 
 This app registers [WebMCP](https://github.com/webmachinelearning/webmcp)

@@ -68,6 +68,11 @@ storeAdmin:
     tag: "latest"
   serviceType: LoadBalancer
 
+# Name of the Kubernetes secret holding the store-front/store-admin portal
+# HTTP Basic authentication credentials (keys: username, password).
+auth:
+  secretName: "store-auth"
+
 storeFront:
   image:
     repository: "ghcr.io/azure-samples/aks-store-demo/store-front"
