@@ -14,13 +14,17 @@
         <router-link to="/cart" @click="closeNav">Cart ({{ cartItemCount }})</router-link>
       </li>
     </ul>
+    <button class="logout" @click="onLogout">Sign out</button>
   </nav>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores'
+import { logout } from '@/auth'
 
+const router = useRouter()
 const cartStore = useCartStore()
 const isNavOpen = ref(false)
 
@@ -33,9 +37,25 @@ const toggleNav = () => {
 const closeNav = () => {
   isNavOpen.value = false
 }
+
+const onLogout = () => {
+  closeNav()
+  logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
+.logout {
+  background: none;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.75rem;
+}
+
 nav {
   display: flex;
   justify-content: space-between;

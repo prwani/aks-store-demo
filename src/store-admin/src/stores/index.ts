@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { Product, Order } from '@/types'
+import { authFetch } from '@/auth'
 
 export const useProductStore = defineStore('product', () => {
   const products = ref<Product[]>([])
@@ -52,7 +53,7 @@ export const useOrderStore = defineStore('order', () => {
     }
 
     const updatedOrder = { ...foundOrder, status }
-    const response = await fetch('/api/makeline/order', {
+    const response = await authFetch('/api/makeline/order', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedOrder),

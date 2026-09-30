@@ -60,6 +60,10 @@ services:
     build: src/store-front
     container_name: "store-front"
     restart: always
+    environment:
+      - AUTH_USERNAME=${AUTH_USERNAME:-}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
+      - AUTH_ENABLED=${AUTH_ENABLED:-true}
     ports:
       - 8080:8080
     healthcheck:

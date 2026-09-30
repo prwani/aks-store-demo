@@ -14,6 +14,8 @@ import httpx
 from typing import List, Dict, Any, Optional
 from mcp.server import FastMCP
 
+import auth
+
 # Initialize the FastMCP server. Bind to 0.0.0.0 so the streamable-http
 # transport is reachable from outside the container/pod, not just localhost.
 mcp = FastMCP(
@@ -414,4 +416,5 @@ async def get_order_statistics() -> Dict[str, Any]:
 if __name__ == "__main__":
     # Run the MCP server over streamable HTTP so it can be reached as a
     # network service (e.g. from Copilot Studio / M365 Copilot), not stdio.
-    mcp.run(transport="streamable-http")
+    # Requests are protected with HTTP Basic authentication (see auth.py).
+    auth.run(mcp, realm="Store Admin MCP")

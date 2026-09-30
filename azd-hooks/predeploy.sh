@@ -135,3 +135,18 @@ if [ -n "${AZURE_COSMOS_DATABASE_URI}" ]; then
 useMongoDB: false
 EOF
 fi
+
+###########################################################
+# Portal (store-front/store-admin) basic auth credentials
+###########################################################
+if [ -z "${AUTH_USERNAME}" ] || [ -z "${AUTH_PASSWORD}" ]; then
+  echo "ERROR: AUTH_USERNAME and AUTH_PASSWORD must be set - they are the credentials used to sign in to the store-front and store-admin portals." >&2
+  echo "       For example: azd env set AUTH_USERNAME <username> && azd env set AUTH_PASSWORD <password>" >&2
+  exit 1
+fi
+
+cat << EOF >> custom-values.yaml
+auth:
+  username: "${AUTH_USERNAME}"
+  password: "${AUTH_PASSWORD}"
+EOF

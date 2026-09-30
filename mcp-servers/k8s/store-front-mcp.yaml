@@ -28,6 +28,16 @@ spec:
               value: "http://order-service:3000"
             - name: PORT
               value: "8100"
+            - name: MCP_AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-auth
+                  key: username
+            - name: MCP_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-auth
+                  key: password
           resources:
             requests:
               cpu: 10m

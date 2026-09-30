@@ -77,8 +77,17 @@ This application uses public images stored in GitHub Container Registry and Micr
 
 This deployment deploys everything except the `ai-service` that integrates OpenAI. If you want to try integrating the OpenAI component, take a look at this article: [Deploy an application that uses OpenAI on Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/open-ai-quickstart?tabs=aoai).
 
+The `store-front` and `store-admin` web portals are protected with HTTP Basic
+authentication (see [Authentication](#authentication)), so create the
+`store-auth` secret with the credentials you want to sign in with before
+deploying:
+
 ```bash
 kubectl create ns pets
+
+kubectl create secret generic store-auth -n pets \
+  --from-literal=username='<your-username>' \
+  --from-literal=password='<your-password>'
 
 kubectl apply -f https://raw.githubusercontent.com/Azure-Samples/aks-store-demo/main/aks-store-all-in-one.yaml -n pets
 ```
@@ -126,13 +135,39 @@ Alternatively, if you do not have access to Azure OpenAI or OpenAI API keys, you
 #      - backend_services
 ```
 
-Start the app using `docker compose`. For example:
+Set the credentials used to sign in to the `store-front` and `store-admin`
+portals (see [Authentication](#authentication)) and start the app using
+`docker compose`. For example:
 
 ```bash
+export AUTH_USERNAME=<your-username>
+export AUTH_PASSWORD=<your-password>
+
 docker compose up
 ```
 
 To stop the app, you can hit the `CTRL+C` key combination in the terminal window where the app is running.
+
+## Authentication
+
+The two web portals and the two MCP servers all require credentials:
+
+| Component | Mechanism | Credentials from |
+| --- | --- | --- |
+| `store-front` / `store-admin` | Login page in the app; nginx enforces HTTP Basic auth on every `/api/*` call | `AUTH_USERNAME` / `AUTH_PASSWORD` env vars (Kubernetes: the `store-auth` secret) |
+| `store-front-mcp` / `store-admin-mcp` | HTTP Basic auth on the `/mcp` endpoint | `MCP_AUTH_USERNAME` / `MCP_AUTH_PASSWORD` env vars (Kubernetes: the `mcp-auth` secret) |
+
+Signing in to a portal stores the credentials for the browser session only; the
+"Sign out" button in the navigation bar clears them. Containers refuse to start
+when the credentials are missing; set `AUTH_ENABLED=false` (portals) or
+`MCP_AUTH_ENABLED=false` (MCP servers) to run without authentication during
+local development.
+
+Since HTTP Basic credentials are sent on every request, always serve these
+components over HTTPS outside of local development.
+
+For instructions on connecting the MCP servers to ChatGPT, Claude Desktop and
+Microsoft 365 Copilot, see [docs/mcp-clients.md](./docs/mcp-clients.md).
 
 ## Run the app with GitHub Codespaces
 

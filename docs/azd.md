@@ -111,6 +111,8 @@ The following environment variables control what gets deployed:
 | `AZURE_COSMOSDB_ACCOUNT_KIND`     | Cosmos DB API kind: `MongoDB` or `GlobalDocumentDB` (SQL API). Default: `GlobalDocumentDB`.                                                                        |
 | `DEPLOY_OBSERVABILITY_TOOLS`      | Set `true` to deploy Log Analytics, managed Prometheus, Managed Grafana, and enable Container Insights.                                                            |
 | `SOURCE_REGISTRY`                 | Source container registry for images. Default: `ghcr.io/azure-samples`.                                                                                            |
+| `AUTH_USERNAME`                   | **Required.** Username used to sign in to the `store-front` and `store-admin` portals.                                                                              |
+| `AUTH_PASSWORD`                   | **Required.** Password used to sign in to the `store-front` and `store-admin` portals.                                                                              |
 
 These environment variables listed above can be set with commands like this:
 
@@ -144,6 +146,10 @@ azd env set DEPLOY_OBSERVABILITY_TOOLS true
 
 # set custom source registry (optional)
 azd env set SOURCE_REGISTRY ghcr.io/azure-samples
+
+# set the credentials used to sign in to the store-front and store-admin portals (required)
+azd env set AUTH_USERNAME <username>
+azd env set AUTH_PASSWORD <password>
 ```
 
 > [!NOTE]

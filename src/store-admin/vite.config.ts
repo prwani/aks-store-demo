@@ -36,6 +36,30 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         }
       })
 
+      // Dev-server stand-in for the nginx protected login endpoint. Validates
+      // the submitted Basic credentials against AUTH_USERNAME/AUTH_PASSWORD
+      // when they are configured, otherwise accepts any credentials.
+      server.middlewares.use('/api/auth/login', (req: IncomingMessage, res: ServerResponse) => {
+        const expectedUser = env.VITE_AUTH_USERNAME || process.env.AUTH_USERNAME
+        const expectedSecret = env.VITE_AUTH_PASSWORD || process.env.AUTH_PASSWORD
+
+        if (expectedUser && expectedSecret) {
+          const header = req.headers.authorization || ''
+          const encoded = header.startsWith('Basic ') ? header.slice(6) : ''
+          const decoded = encoded ? Buffer.from(encoded, 'base64').toString('utf8') : ''
+          if (decoded !== `${expectedUser}:${expectedSecret}`) {
+            res.statusCode = 401
+            res.setHeader('WWW-Authenticate', 'Basic realm="Contoso Pet Store"')
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Unauthorized' }))
+            return
+          }
+        }
+
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ status: 'ok' }))
+      })
+
       // Get all orders
       server.middlewares.use('/api/makeline/order/fetch', (req: IncomingMessage, res: ServerResponse) => {
         if (req.method === 'GET') {

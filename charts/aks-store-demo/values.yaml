@@ -68,6 +68,14 @@ storeAdmin:
     tag: "latest"
   serviceType: LoadBalancer
 
+# HTTP Basic authentication credentials for the store-front/store-admin portals.
+# When username and password are both set, the chart creates the secret named
+# below; otherwise the secret is expected to exist already in the namespace.
+auth:
+  secretName: "store-auth"
+  username: ""
+  password: ""
+
 storeFront:
   image:
     repository: "ghcr.io/azure-samples/aks-store-demo/store-front"
