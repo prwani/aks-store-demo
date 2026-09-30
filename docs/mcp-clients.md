@@ -24,9 +24,11 @@ You need three things for every client below:
    [deployment notes](../mcp-servers/README.md#deployment) for the Azure Front
    Door setup that provides a Microsoft-managed certificate.
 
-Several clients accept the credentials directly in the URL
-(`https://<user>:<password>@host/mcp`); prefer a header when the client supports
-it, so the password does not end up in logs or link previews.
+Prefer sending credentials as an `Authorization: Basic ...` request header over
+embedding them in the URL. None of the clients covered in this guide document
+support for URL-embedded credentials (`https://<user>:<password>@host/mcp`),
+and putting the password there risks it leaking into logs, proxies, or link
+previews.
 
 ### Verify the endpoint first
 
@@ -73,8 +75,11 @@ plans; availability varies by plan and region).
    - **Authentication**: choose **Custom headers** (or *API key / header* depending
      on the ChatGPT build) and add
      `Authorization: Basic <base64 of username:password>`.
-     If only OAuth and "no authentication" are offered, put the credentials in
-     the URL instead: `https://<user>:<password>@<host>/mcp`.
+     If only OAuth and "no authentication" are offered, your ChatGPT build does
+     not yet support custom headers for this connector type; use the `curl`
+     check above to confirm the server itself is reachable and reauthenticate
+     with a build/plan that exposes the custom-header option instead of
+     putting credentials in the URL, which ChatGPT does not support.
 5. Confirm the trust prompt and create the connector. ChatGPT immediately calls
    `tools/list`; a failure here almost always means the URL is wrong, the
    certificate is not trusted, or the credentials are missing.
@@ -90,21 +95,15 @@ plans; availability varies by plan and region).
 
 ## Claude Desktop
 
-Claude Desktop supports remote MCP servers in two ways. The **connector UI** is
-the simplest; the **config file with `mcp-remote`** works on every plan and gives
-you full control over headers.
+Claude's remote-connector authentication only supports OAuth 2.0 or a
+static credential sent in a request header (a Claude Desktop beta feature with
+limited availability) — there is no option to authenticate with credentials
+embedded in the connector URL, and Claude does not support HTTP Basic auth
+directly. The reliable way to reach a Basic-auth-protected server such as this
+one is the **config file with `mcp-remote`** below, which runs locally and adds
+the `Authorization: Basic ...` header itself.
 
-### Option A — Add a custom connector (Claude Pro/Max/Team/Enterprise)
-
-1. Open Claude Desktop → **Settings** → **Connectors** → **Add custom
-   connector**.
-2. Enter the name (`AKS Store Front`) and the URL
-   `https://<store-front-endpoint>.azurefd.net/mcp`.
-3. Because the servers use Basic (not OAuth) authentication, embed the
-   credentials in the URL: `https://<user>:<password>@<host>/mcp`.
-4. Save, then enable the connector in the chat's tool menu.
-
-### Option B — Configure `claude_desktop_config.json` (any plan)
+### Configure `claude_desktop_config.json`
 
 1. Open **Settings** → **Developer** → **Edit Config**, which opens
    `claude_desktop_config.json`:

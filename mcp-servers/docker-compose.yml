@@ -10,8 +10,9 @@ services:
     environment:
       - PRODUCT_SERVICE_URL=http://product-service:3002
       - ORDER_SERVICE_URL=http://order-service:3000
-      - MCP_AUTH_USERNAME=${MCP_AUTH_USERNAME:?set MCP_AUTH_USERNAME}
-      - MCP_AUTH_PASSWORD=${MCP_AUTH_PASSWORD:?set MCP_AUTH_PASSWORD}
+      - MCP_AUTH_USERNAME=${MCP_AUTH_USERNAME:-}
+      - MCP_AUTH_PASSWORD=${MCP_AUTH_PASSWORD:-}
+      - MCP_AUTH_ENABLED=${MCP_AUTH_ENABLED:-true}
     depends_on:
       - product-service
       - order-service
@@ -29,8 +30,9 @@ services:
       - ORDER_SERVICE_URL=http://order-service:3000
       - MAKELINE_SERVICE_URL=http://makeline-service:3001
       - AI_SERVICE_URL=http://ai-service:5001
-      - MCP_AUTH_USERNAME=${MCP_AUTH_USERNAME:?set MCP_AUTH_USERNAME}
-      - MCP_AUTH_PASSWORD=${MCP_AUTH_PASSWORD:?set MCP_AUTH_PASSWORD}
+      - MCP_AUTH_USERNAME=${MCP_AUTH_USERNAME:-}
+      - MCP_AUTH_PASSWORD=${MCP_AUTH_PASSWORD:-}
+      - MCP_AUTH_ENABLED=${MCP_AUTH_ENABLED:-true}
     depends_on:
       - product-service
       - order-service

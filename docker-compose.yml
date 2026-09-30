@@ -100,8 +100,9 @@ services:
     container_name: store-front
     restart: always
     environment:
-      - AUTH_USERNAME=${AUTH_USERNAME:?set AUTH_USERNAME}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:?set AUTH_PASSWORD}
+      - AUTH_USERNAME=${AUTH_USERNAME:-}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
+      - AUTH_ENABLED=${AUTH_ENABLED:-true}
     ports:
       - 8080:8080
     healthcheck:
@@ -119,8 +120,9 @@ services:
     container_name: store-admin
     restart: always
     environment:
-      - AUTH_USERNAME=${AUTH_USERNAME:?set AUTH_USERNAME}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:?set AUTH_PASSWORD}
+      - AUTH_USERNAME=${AUTH_USERNAME:-}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
+      - AUTH_ENABLED=${AUTH_ENABLED:-true}
     ports:
       - 8081:8081
     healthcheck:

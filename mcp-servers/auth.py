@@ -29,13 +29,25 @@ import uvicorn
 DEFAULT_PUBLIC_PATHS: Sequence[str] = ("/health", "/healthz", "/readyz")
 
 
-def _is_truthy(value: str) -> bool:
-    return value.strip().lower() in ("1", "true", "yes", "on")
+_TRUE_VALUES = ("1", "true", "yes", "on")
+_FALSE_VALUES = ("0", "false", "no", "off")
 
 
 def auth_enabled() -> bool:
-    """Return True when Basic authentication should be enforced."""
-    return _is_truthy(os.getenv("MCP_AUTH_ENABLED", "true"))
+    """Return True when Basic authentication should be enforced.
+
+    Only recognized true/false values are accepted; anything else (including a
+    typo such as "flase") is rejected so the server fails closed instead of
+    silently running without authentication.
+    """
+    raw = os.getenv("MCP_AUTH_ENABLED", "true").strip().lower()
+    if raw in _TRUE_VALUES:
+        return True
+    if raw in _FALSE_VALUES:
+        return False
+    raise RuntimeError(
+        f"Invalid MCP_AUTH_ENABLED value {raw!r}. Use one of {_TRUE_VALUES + _FALSE_VALUES}."
+    )
 
 
 class BasicAuthMiddleware:
