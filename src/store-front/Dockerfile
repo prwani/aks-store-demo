@@ -37,6 +37,9 @@ COPY nginx.conf /etc/nginx/conf.d/nginx.conf.template
 # and Copy the nginx configuration template to the container
 RUN envsubst '${APP_VERSION}' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf
 
+# Static body returned by the credential check endpoint used by the login page
+RUN printf '{"status":"ok"}' > /usr/share/nginx/html/auth-check.json
+
 # Generate the HTTP Basic authentication config from environment variables at
 # container start (scripts in /docker-entrypoint.d are run by the nginx image)
 COPY docker-entrypoint.d/20-basic-auth.sh /docker-entrypoint.d/20-basic-auth.sh

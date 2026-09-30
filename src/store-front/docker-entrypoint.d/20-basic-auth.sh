@@ -29,6 +29,9 @@ fi
 
 umask 077
 printf '%s:{PLAIN}%s\n' "$AUTH_USERNAME" "$AUTH_PASSWORD" > "$AUTH_USER_FILE"
+# Readable by the nginx worker user only
+chown nginx "$AUTH_USER_FILE" 2>/dev/null || true
+chmod 400 "$AUTH_USER_FILE"
 
 cat > "$AUTH_CONF" <<EOF
 auth_basic "${AUTH_REALM:-Contoso Pet Store}";
