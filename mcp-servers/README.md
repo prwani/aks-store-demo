@@ -195,12 +195,10 @@ of the app, wired to the in-cluster backend services, are under
 [`mcp-servers/k8s`](./k8s):
 
 - `store-front-mcp.yaml` / `store-admin-mcp.yaml` — Deployment + ClusterIP Service
-- `cluster-issuer.yaml` — a cert-manager self-signed `ClusterIssuer` (used only for
-  the internal ingress TLS listener; no external ACME/Let's Encrypt calls)
 - `ingress.yaml` — ingress-nginx `Ingress` resources exposing each server at
-  `https://<server>.<ingress-ip>.nip.io/mcp` (self-signed cert, `ssl-redirect`
-  disabled so plain HTTP is also available for internal/edge-terminated TLS
-  scenarios)
+  `http://<server>.<ingress-ip>.nip.io/mcp` (plain HTTP; public HTTPS is
+  terminated at Azure Front Door, see below, so no in-cluster TLS cert is
+  needed)
 
 Both deployments read their Basic auth credentials from a `mcp-auth` secret in the
 `pets` namespace, so create it before applying the manifests:
@@ -213,7 +211,7 @@ kubectl create secret generic mcp-auth --namespace pets \
 
 ```bash
 kubectl apply -f mcp-servers/k8s/store-front-mcp.yaml -f mcp-servers/k8s/store-admin-mcp.yaml
-kubectl apply -f mcp-servers/k8s/cluster-issuer.yaml -f mcp-servers/k8s/ingress.yaml
+kubectl apply -f mcp-servers/k8s/ingress.yaml
 ```
 
 ### Public HTTPS endpoint (Azure Front Door)
