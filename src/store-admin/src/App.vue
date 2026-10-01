@@ -55,12 +55,19 @@ const fetchData = () => {
     console.log('Fetching orders')
     authFetch('/api/makeline/order/fetch')
       .then((response) => {
-        if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch orders: ${response.status}`)
+        }
         return response.json()
       })
       .then((data: Order[]) => {
-        orderStore.addOrders(data)
-        console.log(`Fetched ${data.length} orders`)
+        if (Array.isArray(data)) {
+          orderStore.addOrders(data)
+          console.log(`Fetched ${data.length} orders`)
+        } else {
+          console.error('Unexpected response format:', data)
+          orderStore.initialized = true
+        }
       })
       .catch((error) => {
         console.log(error)

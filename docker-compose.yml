@@ -1,19 +1,20 @@
 services:
-  mongodb:
-    image: mongo:6.0.6
-    container_name: mongo
+  documentdb:
+    image: ghcr.io/documentdb/documentdb/documentdb-local:pg17-0.112.0
+    container_name: documentdb
     restart: always
     ports:
-      - 27017:27017
+      - 10260:10260
+    command: ["--username", "username", "--password", "password"]
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      test: ["CMD-SHELL", "echo | openssl s_client -connect localhost:10260 -brief 2>/dev/null | grep -q CONNECTED"]
       interval: 30s
       timeout: 10s
       retries: 5
     networks:
       - backend_services
   rabbitmq:
-    image: rabbitmq:3.13.2-management-alpine
+    image: rabbitmq:4.3.2-management-alpine
     container_name: rabbitmq
     restart: always
     environment:
@@ -27,8 +28,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    volumes:
-      - ./rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
     networks:
       - backend_services
   order-service:
@@ -38,7 +37,15 @@ services:
     ports:
       - 3000:3000
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://order-service:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "-O",
+          "/dev/null",
+          "-q",
+          "http://order-service:3000/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -48,7 +55,6 @@ services:
       - ORDER_QUEUE_USERNAME=username
       - ORDER_QUEUE_PASSWORD=password
       - ORDER_QUEUE_NAME=orders
-      - ORDER_QUEUE_RECONNECT_LIMIT=3
     networks:
       - backend_services
     depends_on:
@@ -61,7 +67,15 @@ services:
     ports:
       - 3001:3001
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://makeline-service:3001/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "-O",
+          "/dev/null",
+          "-q",
+          "http://makeline-service:3001/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -70,15 +84,17 @@ services:
       - ORDER_QUEUE_USERNAME=username
       - ORDER_QUEUE_PASSWORD=password
       - ORDER_QUEUE_NAME=orders
-      - ORDER_DB_URI=mongodb://mongodb:27017
+      - ORDER_DB_URI=mongodb://documentdb:10260/?tls=true&tlsAllowInvalidCertificates=true
       - ORDER_DB_NAME=orderdb
       - ORDER_DB_COLLECTION_NAME=orders
+      - ORDER_DB_USERNAME=username
+      - ORDER_DB_PASSWORD=password
     networks:
       - backend_services
     depends_on:
       rabbitmq:
         condition: service_healthy
-      mongodb:
+      documentdb:
         condition: service_healthy
   product-service:
     build: src/product-service
@@ -87,7 +103,15 @@ services:
     ports:
       - 3002:3002
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://product-service:3002/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "-O",
+          "/dev/null",
+          "-q",
+          "http://product-service:3002/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -106,7 +130,8 @@ services:
     ports:
       - 8080:8080
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-front:80/health"]
+      test:
+        ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-front:80/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -126,7 +151,8 @@ services:
     ports:
       - 8081:8081
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-admin:80/health"]
+      test:
+        ["CMD", "wget", "-O", "/dev/null", "-q", "http://store-admin:80/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -166,16 +192,27 @@ services:
     ports:
       - 5001:5001
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://ai-service:5001/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "-O",
+          "/dev/null",
+          "-q",
+          "http://ai-service:5001/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
     environment:
-      - USE_AZURE_OPENAI=True # set to False if you are not using Azure OpenAI
+      - USE_AZURE_OPENAI=True
+      - AZURE_OPENAI_API_VERSION=2024-12-01-preview
       - AZURE_OPENAI_DEPLOYMENT_NAME= # required if using Azure OpenAI
       - AZURE_OPENAI_ENDPOINT= # required if using Azure OpenAI
-      - OPENAI_API_KEY= # required if using OpenAI and not required if using Azure OpenAI with Azure AD
-      - OPENAI_ORG_ID= # required if using OpenAI
+      - AZURE_OPENAI_API_KEY= # required if using Azure OpenAI key auth (not needed with workload identity)
+      - AZURE_OPENAI_IMAGE_API_VERSION=2025-04-01-preview
+      - AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME= # required for image generation
+      - AZURE_OPENAI_IMAGE_ENDPOINT= # optional override; defaults to AZURE_OPENAI_ENDPOINT
     networks:
       - backend_services
 networks:

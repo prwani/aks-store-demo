@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Azure CLI login
-        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -29,6 +29,11 @@ jobs:
         run: npm ci
         working-directory: tests
 
+      - name: Wait for services to be ready
+        uses: ./.github/actions/wait-for-services
+        with:
+          store-front-url: ${{ inputs.storeFrontUrl }}
+
       - name: Run Playwright tests
         run: npx playwright test --config=playwright.service.config.ts --workers=20
         working-directory: tests
@@ -36,5 +41,5 @@ jobs:
           PLAYWRIGHT_SERVICE_URL: ${{ secrets.PLAYWRIGHT_SERVICE_URL }}
           SERVICE_STORE_ADMIN_ENDPOINT_URL: ${{ inputs.storeAdminUrl }}
           SERVICE_STORE_FRONT_ENDPOINT_URL: ${{ inputs.storeFrontUrl }}
-          COMPANY_NAME: 'Contoso'
+          COMPANY_NAME: "Contoso"
           CI: true

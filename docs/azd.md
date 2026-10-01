@@ -1,6 +1,6 @@
 # Deploying the AKS Store Demo app to Azure using Azure Developer CLI
 
-Using the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview), you can deploy this solution to Azure in minutes. By default it ships prebuilt container images and RabbitMQ/MongoDB; you can also opt into Azure Service Bus and Azure Cosmos DB, and even build app images from source.
+Using the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview), you can deploy this solution to Azure in minutes. By default it ships prebuilt container images and RabbitMQ/DocumentDB; you can also opt into Azure Service Bus and Azure Cosmos DB, and even build app images from source.
 
 ## Prerequisites
 
@@ -43,27 +43,27 @@ az login
 >
 > You may also need to register the following Azure resource providers in your subscription if they are not already registered:
 >
-> - `Microsoft.ContainerService` (for AKS)
-> - `Microsoft.KeyVault` (for Key Vault)
-> - `Microsoft.CognitiveServices` (for Azure OpenAI)
-> - `Microsoft.ServiceBus` (if using Service Bus)
-> - `Microsoft.DocumentDB` (if using Cosmos DB)
-> - `Microsoft.OperationalInsights` (if using observability tools)
 > - `Microsoft.AlertsManagement` (if using observability tools)
+> - `Microsoft.CognitiveServices` (for Azure OpenAI)
+> - `Microsoft.ContainerService` (for AKS)
+> - `Microsoft.DocumentDB` (if using Cosmos DB)
+> - `Microsoft.KeyVault` (for Key Vault)
+> - `Microsoft.OperationalInsights` (if using observability tools)
+> - `Microsoft.ServiceBus` (if using Service Bus)
 >
 > You can register these providers using the Azure CLI:
 >
 > ```bash
-> az provider register --namespace Microsoft.ContainerService
-> az provider register --namespace Microsoft.KeyVault
-> az provider register --namespace Microsoft.CognitiveServices
-> az provider register --namespace Microsoft.ServiceBus
-> az provider register --namespace Microsoft.DocumentDB
-> az provider register --namespace Microsoft.OperationalInsights
 > az provider register --namespace Microsoft.AlertsManagement
+> az provider register --namespace Microsoft.CognitiveServices
+> az provider register --namespace Microsoft.ContainerService
+> az provider register --namespace Microsoft.DocumentDB
+> az provider register --namespace Microsoft.KeyVault
+> az provider register --namespace Microsoft.OperationalInsights
+> az provider register --namespace Microsoft.ServiceBus
 > ```
 
-When selecting an Azure region, choose one that supports all services used here: Azure OpenAI, AKS, Key Vault, Service Bus, Cosmos DB, Log Analytics, Azure Monitor (managed Prometheus), and Managed Grafana.
+When selecting an Azure region, choose one that supports all services used here: Azure OpenAI, AKS, Key Vault, Service Bus, Cosmos DB, Log Analytics, Azure Monitor (managed Prometheus).
 
 ### Availability zone support
 
@@ -77,7 +77,7 @@ az account list-locations \
 
 See the [Azure documentation on availability zones](https://learn.microsoft.com/azure/reliability/availability-zones-overview) for details and service-specific guidance.
 
-If you are deploying an Azure OpenAI account, you will need to ensure you have enough [tokens per minute quota](https://learn.microsoft.com/azure/ai-services/openai/how-to/quota?tabs=cli) for the `gpt-4o-mini` model. You can check your quota by running the following command:
+If you are deploying an Azure OpenAI account, you will need to ensure you have enough [tokens per minute quota](https://learn.microsoft.com/azure/ai-services/openai/how-to/quota?tabs=cli) for the `gpt-5-mini` model. You can check your quota by running the following command:
 
 ```bash
 REGION=swedencentral
@@ -89,7 +89,7 @@ az cognitiveservices usage list \
 ```
 
 > [!TIP]
-> If difference between current value and limit for `OpenAI.Standard.gpt-4o-mini` is less than 30, you can request more by following the instructions in the [Azure OpenAI documentation](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits#how-to-request-increases-to-the-default-quotas-and-limits).
+> If difference between current value and limit for `OpenAI.Standard.gpt-5-mini` is less than 30, you can request more by following the instructions in the [Azure OpenAI documentation](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits#how-to-request-increases-to-the-default-quotas-and-limits).
 
 ### Deployment settings
 
@@ -100,16 +100,16 @@ The following environment variables control what gets deployed:
 | Variable                          | Description                                                                                                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `AZURE_LOCATION`                  | The Azure region for the deployment.                                                                                                                               |
-| `AKS_NODE_POOL_VM_SIZE`           | AKS node VM size. Default: `Standard_D2s_v4`.                                                                                                                      |
+| `AKS_NODE_POOL_VM_SIZE`           | AKS node VM size. Default: `Standard_D2s_v6`.                                                                                                                      |
 | `DEPLOY_AZURE_CONTAINER_REGISTRY` | Set `true` to provision Azure Container Registry (ACR). When enabled, images are either imported from GHCR or built to ACR and the deployment uses that registry.  |
 | `BUILD_CONTAINERS`                | With ACR enabled (above), set `true` to build images from `src/*` using `az acr build`. If `false`/unset, images are imported from GHCR into ACR.                  |
 | `DEPLOY_AZURE_OPENAI`             | Set `true` to deploy Azure OpenAI and enable `ai-service` with workload identity.                                                                                  |
 | `AZURE_OPENAI_LOCATION`           | Region for Azure OpenAI. See [model availability](https://learn.microsoft.com/azure/ai-services/openai/concepts/models#provisioned-deployment-model-availability). |
-| `DEPLOY_IMAGE_GENERATION_MODEL`   | Set `true` to deploy DALL‑E 3 (image generation) along with Azure OpenAI.                                                                                          |
+| `DEPLOY_IMAGE_GENERATION_MODEL`   | Set `true` to deploy an Azure OpenAI image generation model (for example `gpt-image-2`) along with Azure OpenAI.                                                   |
 | `DEPLOY_AZURE_SERVICE_BUS`        | Set `true` to deploy Azure Service Bus (RabbitMQ disabled in app).                                                                                                 |
-| `DEPLOY_AZURE_COSMOSDB`           | Set `true` to deploy Azure Cosmos DB (MongoDB disabled in app).                                                                                                    |
+| `DEPLOY_AZURE_COSMOSDB`           | Set `true` to deploy Azure Cosmos DB (DocumentDB disabled in app).                                                                                                 |
 | `AZURE_COSMOSDB_ACCOUNT_KIND`     | Cosmos DB API kind: `MongoDB` or `GlobalDocumentDB` (SQL API). Default: `GlobalDocumentDB`.                                                                        |
-| `DEPLOY_OBSERVABILITY_TOOLS`      | Set `true` to deploy Log Analytics, managed Prometheus, Managed Grafana, and enable Container Insights.                                                            |
+| `DEPLOY_OBSERVABILITY_TOOLS`      | Set `true` to deploy Log Analytics, managed Prometheus, and enable Container Insights.                                                                             |
 | `SOURCE_REGISTRY`                 | Source container registry for images. Default: `ghcr.io/azure-samples`.                                                                                            |
 | `AUTH_USERNAME`                   | **Required.** Username used to sign in to the `store-front` and `store-admin` portals.                                                                              |
 | `AUTH_PASSWORD`                   | **Required.** Password used to sign in to the `store-front` and `store-admin` portals.                                                                              |
@@ -121,7 +121,7 @@ These environment variables listed above can be set with commands like this:
 azd env set AZURE_LOCATION swedencentral
 
 # set the SKU of the virtual machine scale set nodes in the AKS cluster
-azd env set AKS_NODE_POOL_VM_SIZE Standard_D2s_v4
+azd env set AKS_NODE_POOL_VM_SIZE Standard_D2s_v6
 
 # deploys azure container registry and imports containers from github container registry
 azd env set DEPLOY_AZURE_CONTAINER_REGISTRY true

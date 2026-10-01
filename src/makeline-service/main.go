@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"sync/atomic"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -16,7 +19,6 @@ const (
 )
 
 func main() {
-	var orderService *OrderService
 
 	// Get the database API type
 	apiType := os.Getenv("ORDER_DB_API")
@@ -27,20 +29,57 @@ func main() {
 		log.Printf("Using MongoDB API")
 	}
 
-	// Initialize the database
-	orderService, err := initDatabase(apiType)
-	if err != nil {
-		log.Printf("Failed to initialize database: %s", err)
-		os.Exit(1)
-	}
+	// Initialize the database with retry logic in the background
+	var orderService *OrderService
+	var dbReady atomic.Bool
+	go func() {
+		var err error
+		maxRetries := 10
+		for i := 0; i < maxRetries; i++ {
+			orderService, err = initDatabase(apiType)
+			if err == nil {
+				dbReady.Store(true)
+				log.Printf("Database initialized successfully")
+
+				// Start the background queue consumer once DB is ready
+				go startConsumer(context.Background(), orderService.repo)
+				return
+			}
+			backoff := time.Duration(min(2<<i, 30)) * time.Second
+			log.Printf("Failed to initialize database (attempt %d/%d): %s. Retrying in %s...", i+1, maxRetries, err, backoff)
+			time.Sleep(backoff)
+		}
+		log.Fatalf("Failed to initialize database after %d attempts: %s", maxRetries, err)
+	}()
 
 	router := gin.Default()
 	router.Use(cors.Default())
-	router.Use(OrderMiddleware(orderService))
+	router.Use(func(c *gin.Context) {
+		if c.FullPath() == "/health" || c.FullPath() == "/liveness" {
+			c.Next()
+			return
+		}
+		if !dbReady.Load() {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not ready"})
+			c.Abort()
+			return
+		}
+		OrderMiddleware(orderService)(c)
+	})
 	router.GET("/order/fetch", fetchOrders)
 	router.GET("/order/:id", getOrder)
 	router.PUT("/order", updateOrder)
+	router.GET("/liveness", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "alive"})
+	})
 	router.GET("/health", func(c *gin.Context) {
+		if !dbReady.Load() {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":  "unavailable",
+				"version": os.Getenv("APP_VERSION"),
+			})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
 			"version": os.Getenv("APP_VERSION"),
@@ -57,7 +96,8 @@ func OrderMiddleware(orderService *OrderService) gin.HandlerFunc {
 	}
 }
 
-// Fetches orders from the order queue and stores them in database
+// Returns pending orders from the database. Queue consumption happens in the
+// background consumer goroutine, so this handler is read-only and fast.
 func fetchOrders(c *gin.Context) {
 	client, ok := c.MustGet("orderService").(*OrderService)
 	if !ok {
@@ -66,24 +106,7 @@ func fetchOrders(c *gin.Context) {
 		return
 	}
 
-	// Get orders from the queue
-	orders, err := getOrdersFromQueue()
-	if err != nil {
-		log.Printf("Failed to fetch orders from queue: %s", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	// Save orders to database
-	err = client.repo.InsertOrders(orders)
-	if err != nil {
-		log.Printf("Failed to save orders to database: %s", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	// Return the orders to be processed
-	orders, err = client.repo.GetPendingOrders()
+	orders, err := client.repo.GetPendingOrders()
 	if err != nil {
 		log.Printf("Failed to get pending orders from database: %s", err)
 		c.AbortWithStatus(http.StatusInternalServerError)

@@ -11,7 +11,7 @@ variable "environment" {
 variable "aks_node_pool_vm_size" {
   description = "value of azure kubernetes node pool vm size"
   type        = string
-  default     = "Standard_D2s_v4"
+  default     = "Standard_D2s_v6"
 }
 
 variable "k8s_namespace" {
@@ -70,13 +70,13 @@ variable "azure_openai_location" {
 variable "chat_completion_model_name" {
   description = "value of chat completion model name"
   type        = string
-  default     = "gpt-4o-mini"
+  default     = "gpt-5.4-mini"
 }
 
 variable "chat_completion_model_version" {
   description = "value of chat completion model version"
   type        = string
-  default     = "2024-07-18"
+  default     = "2026-03-17"
 }
 
 variable "chat_completion_model_capacity" {
@@ -100,13 +100,13 @@ variable "deploy_image_generation_model" {
 variable "image_generation_model_name" {
   description = "value of image generation model name"
   type        = string
-  default     = "dall-e-3"
+  default     = "gpt-image-2"
 }
 
 variable "image_generation_model_version" {
   description = "value of image generation model version"
   type        = string
-  default     = "3.0"
+  default     = "2026-04-21"
 }
 
 variable "image_generation_model_capacity" {
@@ -118,7 +118,7 @@ variable "image_generation_model_capacity" {
 variable "image_generation_model_type" {
   description = "value of image generation model type"
   type        = string
-  default     = "Standard"
+  default     = "GlobalStandard"
 }
 
 variable "source_registry" {

@@ -15,7 +15,7 @@ This is a Vue.js app that simulates a store admin portal where users can manuall
 
 ### Running the app
 
-The app relies on the [product-service](../product-service), [makeline-service](../order-service), and optionally the [ai-service](../ai-service) along with mongodb and rabbitmq instances running. A docker-compose file is provided to make this easy.
+The app relies on the [product-service](../product-service), [makeline-service](../order-service), and optionally the [ai-service](../ai-service) along with DocumentDB and RabbitMQ instances running. A docker-compose file is provided to make this easy.
 
 To run the necessary services, clone the repo, open a terminal, and navigate to the `store-admin` directory.
 
@@ -28,7 +28,11 @@ environment:
   - USE_AZURE_OPENAI=True # set to False if you are not using Azure OpenAI
   - AZURE_OPENAI_DEPLOYMENT_NAME= # required if using Azure OpenAI
   - AZURE_OPENAI_ENDPOINT= # required if using Azure OpenAI
-  - OPENAI_API_KEY= # always required
+  - AZURE_OPENAI_API_KEY= # required if using Azure OpenAI key auth (not needed with workload identity)
+  - AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME=gpt-image-2 # required for image generation
+  - AZURE_OPENAI_IMAGE_API_VERSION=2025-04-01-preview # required for gpt-image-2
+  - AZURE_OPENAI_IMAGE_ENDPOINT= # optional override; defaults to AZURE_OPENAI_ENDPOINT
+  - OPENAI_API_KEY= # required if using OpenAI (or as fallback for Azure key auth)
   - OPENAI_ORG_ID= # required if using OpenAI
 ```
 

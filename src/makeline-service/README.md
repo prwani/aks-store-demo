@@ -2,7 +2,7 @@
 
 This is a Golang app that provides an API for processing orders. It is meant to be used in conjunction with the [store-admin](../store-admin) app.
 
-It is a simple REST API written with the Gin framework that allows you to process orders from a RabbitMQ queue and send them to a MongoDB database.
+It is a simple REST API written with the Gin framework that allows you to process orders from a RabbitMQ queue and send them to a DocumentDB database.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ This app can connect to either RabbitMQ or Azure Service Bus using AMQP 1.0. To 
 
 ### Option 1: RabbitMQ
 
-To run this against RabbitMQ. A docker-compose file is provided to make this easy. This will run RabbitMQ, the RabbitMQ Management UI, and enable the `rabbitmq_amqp1_0` plugin. The plugin is necessary to connect to RabbitMQ using AMQP 1.0.
+To run this against RabbitMQ. A docker-compose file is provided to make this easy. This will run RabbitMQ 4.x with the Management UI. AMQP 1.0 is supported natively in RabbitMQ 4.0 and later without any additional plugins.
 
 With the services running, open a new terminal and navigate to the `makeline-service` directory.
 
@@ -90,20 +90,22 @@ export ORDER_QUEUE_PASSWORD=$PASSWORD
 export ORDER_QUEUE_NAME=orders
 ```
 
-> NOTE: If you are using Azure Service Bus, you will want your `order-service` to write orders to it instead of RabbitMQ. If that is the case, then you'll need to update the [`docker-compose.yml`](./docker-compose.yml) and modify the environment variables for the `order-service` to include the proper connection info to connect to Azure Service Bus. Also you will need to add the `ORDER_QUEUE_TRANSPORT=tls` configuration to connect over TLS.
+> NOTE: If you are using Azure Service Bus, you will want your `order-service` to write orders to it instead of RabbitMQ. If that is the case, then you'll need to update the [`docker-compose.yml`](./docker-compose.yml) and modify the environment variables for the `order-service` to include the proper connection info to connect to Azure Service Bus.
 
 ## Database options
 
-You also have the option to write orders to either MongoDB or Azure CosmosDB.
+You also have the option to write orders to either DocumentDB or Azure CosmosDB.
 
-### Option 1: MongoDB
+### Option 1: DocumentDB
 
-If you are using a local MongoDB container, run the following commands:
+If you are using a local DocumentDB container, run the following commands:
 
 ```bash
-export ORDER_DB_URI=mongodb://localhost:27017
+export ORDER_DB_URI="mongodb://localhost:10260/?tls=true&tlsAllowInvalidCertificates=true"
 export ORDER_DB_NAME=orderdb
 export ORDER_DB_COLLECTION_NAME=orders
+export ORDER_DB_USERNAME=username
+export ORDER_DB_PASSWORD=password
 ```
 
 ### Option 2: Azure CosmosDB
@@ -235,7 +237,7 @@ export ORDER_DB_PASSWORD=$COSMOSDBPASSWORD
 
 ## Running the app locally
 
-The app relies on RabbitMQ and MongoDB. Additionally, to simulate orders, you will need to run the [order-service](../order-service) with the [virtual-customer](../virtual-customer) app. A docker-compose file is provided to make this easy.
+The app relies on RabbitMQ and DocumentDB. Additionally, to simulate orders, you will need to run the [order-service](../order-service) with the [virtual-customer](../virtual-customer) app. A docker-compose file is provided to make this easy.
 
 To run the necessary services, clone the repo, open a terminal, and navigate to the `makeline-service` directory. Then run the following command:
 
@@ -270,11 +272,11 @@ Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-
 
 Using the [`test-makeline-service.http`](./test-makeline-service.http) file in the root of the repo, you can test the API. However, you will need to use VS Code and have the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension installed.
 
-To view the orders in MongoDB, open a terminal and run the following command:
+To view the orders in DocumentDB, open a terminal and run the following command:
 
 ```bash
-# connect to mongodb
-mongosh
+# connect to documentdb
+mongosh "mongodb://username:password@localhost:10260/?tls=true&tlsAllowInvalidCertificates=true"
 
 # show databases and confirm orderdb exists
 show dbs

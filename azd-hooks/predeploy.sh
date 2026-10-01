@@ -67,11 +67,11 @@ aiService:
   useAzureOpenAi: true
 EOF
 
-  # If DALL-E model endpoint and name exists
-  if [ -n "${AZURE_OPENAI_DALL_E_ENDPOINT}" ] && [ -n "${AZURE_OPENAI_DALL_E_MODEL_NAME}" ]; then
+  # If OpenAI image model endpoint and name exists
+  if [ -n "${AZURE_OPENAI_IMAGE_ENDPOINT}" ] && [ -n "${AZURE_OPENAI_IMAGE_MODEL_NAME}" ]; then
     cat << EOF >> custom-values.yaml
-  openAiDalleEndpoint: ${AZURE_OPENAI_DALL_E_ENDPOINT}
-  openAiDalleModelName: ${AZURE_OPENAI_DALL_E_MODEL_NAME}
+  openAiImageEndpoint: ${AZURE_OPENAI_IMAGE_ENDPOINT}
+  openAiImageModelName: ${AZURE_OPENAI_IMAGE_MODEL_NAME}
 EOF
   fi
 fi
@@ -128,11 +128,11 @@ EOF
 fi
 
 ###########################################################
-# Do not deploy MongoDB when using Azure Cosmos DB
+# Do not deploy DocumentDB when using Azure Cosmos DB
 ###########################################################
 if [ -n "${AZURE_COSMOS_DATABASE_URI}" ]; then
   cat << EOF >> custom-values.yaml
-useMongoDB: false
+useDocumentDB: false
 EOF
 fi
 

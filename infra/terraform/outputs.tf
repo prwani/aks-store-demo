@@ -23,7 +23,7 @@ output "AZURE_AKS_CLUSTER_ID" {
 }
 
 output "AZURE_AKS_OIDC_ISSUER_URL" {
-  value = module.aks.oidc_issuer_url
+  value = module.aks.oidc_issuer_profile_issuer_url
 }
 
 output "AZURE_OPENAI_ENDPOINT" {
@@ -34,11 +34,11 @@ output "AZURE_OPENAI_MODEL_NAME" {
   value = local.deploy_azure_openai ? var.chat_completion_model_name : ""
 }
 
-output "AZURE_OPENAI_DALL_E_MODEL_NAME" {
+output "AZURE_OPENAI_IMAGE_MODEL_NAME" {
   value = local.deploy_image_generation_model ? var.image_generation_model_name : ""
 }
 
-output "AZURE_OPENAI_DALL_E_ENDPOINT" {
+output "AZURE_OPENAI_IMAGE_ENDPOINT" {
   value = local.deploy_image_generation_model ? module.aoai[0].endpoint : ""
 }
 

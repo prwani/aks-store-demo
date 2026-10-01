@@ -8,9 +8,6 @@ data:
   {{- else }}
   ORDER_QUEUE_PORT: "{{ .Values.orderService.queuePort }}"
   {{- end }}
-  {{- if .Values.orderService.queueTransport }}
-  ORDER_QUEUE_TRANSPORT: "{{ .Values.orderService.queueTransport }}"
-  {{- end }}
   ORDER_QUEUE_HOSTNAME: "{{ .Values.orderService.queueHost }}"
   ORDER_QUEUE_NAME: "{{ .Values.orderService.queueName }}"
   FASTIFY_ADDRESS: "0.0.0.0"
@@ -49,7 +46,7 @@ spec:
         "kubernetes.io/os": linux
       containers:
       - name: order-service
-        image: {{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag }}
+        image: {{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag | default .Chart.AppVersion }}
         ports:
         - containerPort: 3000
         envFrom:
@@ -90,7 +87,7 @@ spec:
       {{- if eq .Values.useRabbitMQ true }}
       initContainers:
       - name: wait-for-rabbitmq
-        image: busybox
+        image: busybox:1.37.0
         command: ['sh', '-c', 'until nc -zv rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;']
         resources:
           requests:
