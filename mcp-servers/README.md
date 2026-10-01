@@ -231,11 +231,22 @@ in front of the ingress-nginx controller's public IP and terminates TLS with a
 Microsoft-managed certificate on the default `*.azurefd.net` hostname — no
 custom domain or third-party CA (e.g. Let's Encrypt) is involved:
 
-- `https://<store-front-endpoint>.azurefd.net/mcp`
-- `https://<store-admin-endpoint>.azurefd.net/mcp`
+- `https://<store-front-mcp-endpoint>.azurefd.net/mcp`
+- `https://<store-admin-mcp-endpoint>.azurefd.net/mcp`
+
+The same Front Door profile also fronts the `store-front` web portal itself
+(origin: the `store-front` ingress host defined in
+[`ingress.yaml`](./k8s/ingress.yaml)), so customers get a publicly trusted
+HTTPS URL for the app too, not just the MCP tools:
+
+- `https://<store-front-endpoint>.azurefd.net/login?redirect=/`
 
 Front Door forwards to the ingress-nginx origin over plain HTTP (`ssl-redirect`
 disabled on the ingress), so TLS is only terminated once, at the Front Door edge.
+
+> All three Front Door endpoints (profile `fd-aks-store-mcp`) were provisioned
+> directly via `az afd ...` CLI commands against the live cluster's resource
+> group; they are not yet defined in this repo's Terraform/Bicep IaC.
 
 ## Architecture
 
