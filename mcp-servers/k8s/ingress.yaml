@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: store-front-mcp.74.158.12.121.nip.io
+    - host: store-front-mcp.__INGRESS_IP__.nip.io
       http:
         paths:
           - path: /
@@ -31,7 +31,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: store-admin-mcp.74.158.12.121.nip.io
+    - host: store-admin-mcp.__INGRESS_IP__.nip.io
       http:
         paths:
           - path: /
@@ -53,7 +53,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: store-front.74.158.12.121.nip.io
+    - host: store-front.__INGRESS_IP__.nip.io
       http:
         paths:
           - path: /

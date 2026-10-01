@@ -66,7 +66,10 @@ storeAdmin:
   image:
     repository: "ghcr.io/azure-samples/aks-store-demo/store-admin"
     tag: "" # defaults to Chart.AppVersion
-  serviceType: LoadBalancer
+  # ClusterIP: public access is via ingress-nginx + Azure Front Door (see
+  # mcp-servers/deploy-public-access.ps1/.sh). Set to LoadBalancer for a
+  # direct public IP instead, if that setup isn't used.
+  serviceType: ClusterIP
 
 # HTTP Basic authentication credentials for the store-front/store-admin portals.
 # When username and password are both set, the chart creates the secret named
@@ -80,7 +83,10 @@ storeFront:
   image:
     repository: "ghcr.io/azure-samples/aks-store-demo/store-front"
     tag: "" # defaults to Chart.AppVersion
-  serviceType: LoadBalancer
+  # ClusterIP: public access is via ingress-nginx + Azure Front Door (see
+  # mcp-servers/deploy-public-access.ps1/.sh). Set to LoadBalancer for a
+  # direct public IP instead, if that setup isn't used.
+  serviceType: ClusterIP
 
 virtualCustomer:
   create: true

@@ -200,27 +200,59 @@ of the app, wired to the in-cluster backend services, are under
   terminated at Azure Front Door, see below, so no in-cluster TLS cert is
   needed)
 
-Both deployments read their Basic auth credentials from a `mcp-auth` secret in the
-`pets` namespace, so create it before applying the manifests:
+> The `store-front` / `store-admin` app Services (from the main Helm chart)
+> are also `ClusterIP` (not `LoadBalancer`): public access to the portals goes
+> through this same ingress-nginx + Front Door path, so no separate public IP
+> is needed for them.
+
+### One-shot setup script
+
+[`deploy-public-access.ps1`](./deploy-public-access.ps1) /
+[`deploy-public-access.sh`](./deploy-public-access.sh) automate everything
+below against a freshly provisioned (or existing) AKS cluster: installing
+ingress-nginx, creating the `mcp-auth` secret, applying the `k8s/` manifests,
+and provisioning the Azure Front Door profile/endpoints. It's plain
+`az`/`kubectl`/`helm` CLI — intentionally not Terraform/Bicep, so it can be
+re-run freely without touching [`infra/terraform`](../infra/terraform) or
+risking merge conflicts with upstream. Safe to re-run; every step is
+idempotent.
+
+```powershell
+./deploy-public-access.ps1 -ResourceGroup <rg> -ClusterName <aks-cluster> `
+  -McpAuthUsername <user> -McpAuthPassword <password>
+```
+
+```bash
+./deploy-public-access.sh -g <rg> -c <aks-cluster> -u <user> -p <password>
+```
+
+This creates/updates:
+- The ingress-nginx controller (`ingress-nginx` namespace), discovering its
+  public LoadBalancer IP dynamically (it changes on every fresh cluster, so
+  nothing is hardcoded).
+- The `mcp-auth` secret in the `pets` namespace, from the credentials you pass in.
+- The `store-front-mcp` / `store-admin-mcp` Deployments+Services and the
+  `store-front-mcp` / `store-admin-mcp` / `store-front` Ingress resources
+  (`k8s/ingress.yaml`, with its `__INGRESS_IP__` placeholder substituted at
+  apply-time with the discovered ingress IP — see [Manual steps](#manual-steps)
+  below if you'd rather run this by hand).
+- An Azure Front Door Standard profile (default name `fd-aks-store-mcp`) with
+  3 endpoints/routes/origin-groups pointed at the ingress-nginx IP.
+
+#### Manual steps
+
+If you'd rather do this by hand instead of running the script:
 
 ```bash
 kubectl create secret generic mcp-auth --namespace pets \
   --from-literal=username='<your-username>' \
   --from-literal=password='<your-password>'
-```
 
-Both deployments read their Basic auth credentials from a `mcp-auth` secret in the
-`pets` namespace, so create it before applying the manifests:
-
-```bash
-kubectl create secret generic mcp-auth --namespace pets \
-  --from-literal=username='<your-username>' \
-  --from-literal=password='<your-password>'
-```
-
-```bash
 kubectl apply -f mcp-servers/k8s/store-front-mcp.yaml -f mcp-servers/k8s/store-admin-mcp.yaml
-kubectl apply -f mcp-servers/k8s/ingress.yaml
+
+# ingress.yaml uses the __INGRESS_IP__ placeholder in its hostnames; substitute
+# your ingress-nginx controller's public IP before applying, e.g.:
+sed 's/__INGRESS_IP__/<ingress-controller-ip>/g' mcp-servers/k8s/ingress.yaml | kubectl apply -f -
 ```
 
 ### Public HTTPS endpoint (Azure Front Door)
@@ -244,9 +276,10 @@ HTTPS URL for the app too, not just the MCP tools:
 Front Door forwards to the ingress-nginx origin over plain HTTP (`ssl-redirect`
 disabled on the ingress), so TLS is only terminated once, at the Front Door edge.
 
-> All three Front Door endpoints (profile `fd-aks-store-mcp`) were provisioned
-> directly via `az afd ...` CLI commands against the live cluster's resource
-> group; they are not yet defined in this repo's Terraform/Bicep IaC.
+> All three Front Door endpoints (profile `fd-aks-store-mcp`) are provisioned
+> by `deploy-public-access.ps1`/`.sh` via `az afd ...` CLI commands; they are
+> intentionally not defined in this repo's Terraform/Bicep IaC (see script
+> header comments for why).
 
 ## Architecture
 
