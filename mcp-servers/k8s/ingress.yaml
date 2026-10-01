@@ -4,15 +4,10 @@ metadata:
   name: store-front-mcp
   namespace: pets
   annotations:
-    cert-manager.io/cluster-issuer: selfsigned-issuer
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
-  tls:
-    - hosts:
-        - store-front-mcp.74.158.12.121.nip.io
-      secretName: store-front-mcp-tls
   rules:
     - host: store-front-mcp.74.158.12.121.nip.io
       http:
@@ -31,15 +26,10 @@ metadata:
   name: store-admin-mcp
   namespace: pets
   annotations:
-    cert-manager.io/cluster-issuer: selfsigned-issuer
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
-  tls:
-    - hosts:
-        - store-admin-mcp.74.158.12.121.nip.io
-      secretName: store-admin-mcp-tls
   rules:
     - host: store-admin-mcp.74.158.12.121.nip.io
       http:
@@ -49,5 +39,27 @@ spec:
             backend:
               service:
                 name: store-admin-mcp
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: store-front
+  namespace: pets
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: store-front.74.158.12.121.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: store-front
                 port:
                   number: 80
