@@ -18,9 +18,9 @@ module "sb" {
   # }
 }
 
-resource "azurerm_role_assignment" "service_bus_data_owner" {
+resource "azurerm_role_assignment" "service_bus_data_receiver" {
   count                = local.deploy_azure_servicebus ? 1 : 0
   scope                = module.sb[0].resource_id
-  role_definition_name = "Azure Service Bus Data Owner"
+  role_definition_name = "Azure Service Bus Data Receiver"
   principal_id         = data.azurerm_client_config.current.object_id
 }

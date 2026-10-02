@@ -10,7 +10,8 @@
   This is a one-shot az/kubectl/helm CLI script (no Terraform) so it can be
   re-run against a freshly provisioned cluster without touching
   infra/terraform and risking merge conflicts with upstream
-  Azure-Samples/aks-store-demo. Safe to re-run; every step is idempotent.
+  Azure-Samples/aks-store-demo. It builds the MCP images in the cluster's ACR
+  and resolves that registry dynamically.
 
 .PARAMETER ResourceGroup
   Resource group containing the AKS cluster.
@@ -48,6 +49,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+  $PSNativeCommandUseErrorActionPreference = $true
+}
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 if ($Subscription) {
@@ -56,6 +60,24 @@ if ($Subscription) {
 
 Write-Host "==> Getting AKS credentials for $ClusterName" -ForegroundColor Cyan
 az aks get-credentials --resource-group $ResourceGroup --name $ClusterName --overwrite-existing
+
+$acrName = az acr list --resource-group $ResourceGroup --query '[0].name' -o tsv
+if (-not $acrName) {
+  throw "No Azure Container Registry found in resource group $ResourceGroup"
+}
+Write-Host "    Azure Container Registry: $acrName"
+
+Write-Host "==> Building MCP server images in $acrName" -ForegroundColor Cyan
+Push-Location $scriptDir
+try {
+  az acr build --registry $acrName --image aks-store-demo/store-front-mcp:latest `
+    --file Dockerfile.store-front .
+  az acr build --registry $acrName --image aks-store-demo/store-admin-mcp:latest `
+    --file Dockerfile.store-admin .
+}
+finally {
+  Pop-Location
+}
 
 ###############################################################################
 # 1. Install ingress-nginx (idempotent: helm upgrade --install)
@@ -90,11 +112,14 @@ kubectl create secret generic mcp-auth --namespace $Namespace `
 
 ###############################################################################
 # 3. Apply the MCP server deployments + ingress (host substituted with the
-#    live ingress-nginx IP so it works regardless of which cluster/LB this is)
+#    live ingress-nginx IP and ACR so it works with a fresh cluster)
 ###############################################################################
 Write-Host "==> Applying mcp-servers k8s manifests" -ForegroundColor Cyan
-kubectl apply -f "$scriptDir/k8s/store-front-mcp.yaml"
-kubectl apply -f "$scriptDir/k8s/store-admin-mcp.yaml"
+foreach ($manifestName in @("store-front-mcp.yaml", "store-admin-mcp.yaml")) {
+  $manifest = Get-Content "$scriptDir/k8s/$manifestName" -Raw
+  $manifest = $manifest -replace '__ACR_NAME__', $acrName
+  $manifest | kubectl apply -f -
+}
 
 $ingressYaml = Get-Content "$scriptDir/k8s/ingress.yaml" -Raw
 $ingressYaml = $ingressYaml -replace '__INGRESS_IP__', $ingressIp

@@ -40,10 +40,17 @@ resource "azurerm_role_assignment" "aoai_mid" {
   scope                = module.aoai[0].resource_id
 }
 
-resource "azurerm_role_assignment" "servicebus_mid" {
+resource "azurerm_role_assignment" "servicebus_sender_mid" {
   count                = local.deploy_azure_servicebus ? 1 : 0
   principal_id         = azurerm_user_assigned_identity.example[0].principal_id
-  role_definition_name = "Azure Service Bus Data Owner"
+  role_definition_name = "Azure Service Bus Data Sender"
+  scope                = module.sb[0].resource_id
+}
+
+resource "azurerm_role_assignment" "servicebus_receiver_mid" {
+  count                = local.deploy_azure_servicebus ? 1 : 0
+  principal_id         = azurerm_user_assigned_identity.example[0].principal_id
+  role_definition_name = "Azure Service Bus Data Receiver"
   scope                = module.sb[0].resource_id
 }
 

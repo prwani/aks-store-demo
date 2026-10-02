@@ -1,7 +1,6 @@
 #!/usr/bin/env pwsh
 
 azd config set alpha.aks.helm on
-azd config set alpha.aks.kustomize on
 
 Write-Host "Ensuring providers/features are registered and Azure CLI extensions are installed"
 

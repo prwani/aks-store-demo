@@ -3,7 +3,7 @@ module "acr" {
   count               = local.deploy_azure_container_registry ? 1 : 0
   source              = "Azure/avm-res-containerregistry-registry/azurerm"
   version             = "0.5.1"
-  name                = "acr${local.name}"
+  name                = replace("acr${local.name}", "-", "")
   resource_group_name = azurerm_resource_group.example.name
   location            = azurerm_resource_group.example.location
 }
@@ -14,7 +14,7 @@ module "aks" {
   version   = "0.6.1"
   name      = "aks-${local.name}"
   parent_id = azurerm_resource_group.example.id
-  location  = azurerm_resource_group.example.location
+  location  = var.azure_aks_location != "" ? var.azure_aks_location : azurerm_resource_group.example.location
 
   auto_upgrade_profile = {
     node_os_channel_upgrade = "SecurityPatch"

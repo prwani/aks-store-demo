@@ -1,6 +1,6 @@
 # Deploying the AKS Store Demo app to Azure using Azure Developer CLI
 
-Using the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview), you can deploy this solution to Azure in minutes. By default it ships prebuilt container images and RabbitMQ/DocumentDB; you can also opt into Azure Service Bus and Azure Cosmos DB, and even build app images from source.
+Using the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview), you can deploy this solution to Azure. By default it ships prebuilt container images and RabbitMQ/DocumentDB; you can also opt into Azure Service Bus and Azure Cosmos DB, and even build app images from source.
 
 ## Prerequisites
 
@@ -11,11 +11,11 @@ Opening the [AKS Store Demo repo](https://github.com/Azure-Samples/aks-store-dem
 - [Azure CLI](https://learn.microsoft.com/cli/azure/what-is-azure-cli)
 - [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview) version 1.15.0 or later
 - [Visual Studio Code](https://code.visualstudio.com/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- A running Docker Desktop or Podman container runtime (required by the AKS `azd` target)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [kubelogin](https://azure.github.io/kubelogin/install.html)
 - [Helm](https://helm.sh/docs/intro/install/)
-- [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/)
+- [Kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/) only when using the build-from-source variant
 - [Git](https://git-scm.com/)
 - [Terraform](https://www.terraform.io/)
 - Bash shell
@@ -31,12 +31,13 @@ azd auth login
 # enable Helm support
 azd config set alpha.aks.helm on
 
-# enable Kustomize support (used when building from source)
-azd config set alpha.aks.kustomize on
-
 # authenticate to Azure CLI
 az login
 ```
+
+The default `azure.yaml` deployment uses an external Helm chart and does not
+require Kustomize. Enable `alpha.aks.kustomize` only when deploying with
+`azure-build-from-source.yaml`.
 
 > [!WARNING]
 > Before you run the `azd up` command, make sure that you have the "Owner" role on the subscription you are deploying to. This is because the infrastructure-as-code templates will create Azure role based access control (RBAC) assignments. Otherwise, the deployment will fail.
@@ -77,7 +78,10 @@ az account list-locations \
 
 See the [Azure documentation on availability zones](https://learn.microsoft.com/azure/reliability/availability-zones-overview) for details and service-specific guidance.
 
-If you are deploying an Azure OpenAI account, you will need to ensure you have enough [tokens per minute quota](https://learn.microsoft.com/azure/ai-services/openai/how-to/quota?tabs=cli) for the `gpt-5-mini` model. You can check your quota by running the following command:
+If you are deploying Azure OpenAI, ensure your subscription has enough
+[quota](https://learn.microsoft.com/azure/ai-services/openai/how-to/quota?tabs=cli)
+for the selected model and deployment type. The current default text model is
+`gpt-5.4-mini`. You can inspect regional usage with:
 
 ```bash
 REGION=swedencentral
@@ -88,9 +92,6 @@ az cognitiveservices usage list \
   -o table
 ```
 
-> [!TIP]
-> If difference between current value and limit for `OpenAI.Standard.gpt-5-mini` is less than 30, you can request more by following the instructions in the [Azure OpenAI documentation](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits#how-to-request-increases-to-the-default-quotas-and-limits).
-
 ### Deployment settings
 
 The infrastructure-as-code templates in this repo use variables to define the deployment settings. You can set these variables using the Azure Developer CLI and the templates will evaluate them to provision the resources.
@@ -100,6 +101,7 @@ The following environment variables control what gets deployed:
 | Variable                          | Description                                                                                                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `AZURE_LOCATION`                  | The Azure region for the deployment.                                                                                                                               |
+| `AZURE_AKS_LOCATION`              | Optional AKS-only region override. Defaults to `AZURE_LOCATION`; useful when AKS capacity is constrained in the deployment region.                                  |
 | `AKS_NODE_POOL_VM_SIZE`           | AKS node VM size. Default: `Standard_D2s_v6`.                                                                                                                      |
 | `DEPLOY_AZURE_CONTAINER_REGISTRY` | Set `true` to provision Azure Container Registry (ACR). When enabled, images are either imported from GHCR or built to ACR and the deployment uses that registry.  |
 | `BUILD_CONTAINERS`                | With ACR enabled (above), set `true` to build images from `src/*` using `az acr build`. If `false`/unset, images are imported from GHCR into ACR.                  |
@@ -119,6 +121,9 @@ These environment variables listed above can be set with commands like this:
 ```bash
 # set the main deployment location
 azd env set AZURE_LOCATION swedencentral
+
+# optionally place only the AKS cluster in a different region
+azd env set AZURE_AKS_LOCATION northeurope
 
 # set the SKU of the virtual machine scale set nodes in the AKS cluster
 azd env set AKS_NODE_POOL_VM_SIZE Standard_D2s_v6
@@ -171,7 +176,21 @@ When you run the `azd up` command for the first time, you will be asked for a bi
 
 After you provide the information, `azd up` registers providers/features and installs required Azure CLI extensions. It then runs Terraform to provision Azure resources and deploys the app to AKS using a Helm chart. Workload identity is configured automatically for services that talk to Azure resources.
 
-This will take a few minutes to complete.
+Provisioning time varies; AKS and model deployments can take considerably
+longer than a few minutes.
+
+`AZURE_AKS_LOCATION` overrides the cluster region only. The resource group and
+other Azure services remain in `AZURE_LOCATION`.
+
+When `DEPLOY_AZURE_OPENAI=true`, the deployment also creates the configured
+Azure OpenAI resource and model deployments, which can be managed through
+Azure AI Foundry; the default text model is
+`gpt-5.4-mini`, and image generation is added when
+`DEPLOY_IMAGE_GENERATION_MODEL=true`. The default Helm deployment keeps the
+`store-front` and `store-admin` Services internal (`ClusterIP`). It does not
+deploy the separate MCP servers, ingress-nginx, or Azure Front Door public
+endpoints; those are configured afterward by the scripts in
+[`mcp-servers/README.md`](../mcp-servers/README.md).
 
 > [!NOTE]
 > Infra defaults to [Terraform](../infra/terraform). To use [Bicep](../infra/bicep) instead, open `azure.yaml` and change:
@@ -202,18 +221,21 @@ This flow builds Docker images for each service and deploys using Kustomize over
 
 ## Validate the deployment
 
-Once the deployment completes, `azd` prints outputs. You can get service URLs directly:
+Once the deployment completes, get the resource group:
 
 ```bash
-azd env get-value SERVICE_STORE_FRONT_ENDPOINT_URL
-azd env get-value SERVICE_STORE_ADMIN_ENDPOINT_URL
+azd env get-value AZURE_RESOURCE_GROUP
 ```
 
-You can also browse the resource group (`AZURE_RESOURCE_GROUP`) in the [Azure Portal](https://portal.azure.com). In the AKS resource, check Workloads and Services/Ingresses in the `pets` namespace. `store-front` and `store-admin` are exposed via LoadBalancers with public IPs.
+In the AKS resource, check Workloads, Services, and Ingresses in the `pets`
+namespace. The `store-front` and `store-admin` app Services are `ClusterIP`;
+the public ingress controller is installed separately by the public-access
+deployment.
 
-If you deployed an Azure Service Bus, navigate to the resource and use Azure Service Bus explorer to check for order messages.
-
-If you deployed an Azure CosmosDB, navigate to the resource and use the database explorer to check for order records.
+The public portal URLs are created by the public-access deployment described
+in [`mcp-servers/README.md`](../mcp-servers/README.md). If you deployed Azure
+Service Bus, use Service Bus Explorer to inspect order messages. If you
+deployed Azure Cosmos DB, use its data explorer to inspect order records.
 
 ## Clean up
 

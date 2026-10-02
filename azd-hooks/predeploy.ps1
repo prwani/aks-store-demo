@@ -1,10 +1,9 @@
 #!/usr/bin/env pwsh
 
 ##########################################################
-# Ensure Helm and Kustomize support is enabled  
+# Ensure Helm support is enabled
 ##########################################################
 azd config set alpha.aks.helm on
-azd config set alpha.aks.kustomize on
 
 ##########################################################
 # Check kubelogin and install if not exists
@@ -41,9 +40,11 @@ productService:
 storeAdmin:
   image:
     repository: ${env:SOURCE_REGISTRY}/aks-store-demo/store-admin
+  serviceType: ClusterIP
 storeFront:
   image:
     repository: ${env:SOURCE_REGISTRY}/aks-store-demo/store-front
+  serviceType: ClusterIP
 virtualCustomer:
   image:
     repository: ${env:SOURCE_REGISTRY}/aks-store-demo/virtual-customer

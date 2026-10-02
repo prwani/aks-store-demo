@@ -14,6 +14,12 @@ variable "aks_node_pool_vm_size" {
   default     = "Standard_D2s_v6"
 }
 
+variable "azure_aks_location" {
+  description = "Optional Azure location for the AKS cluster, defaulting to the resource group location"
+  type        = string
+  default     = ""
+}
+
 variable "k8s_namespace" {
   description = "value of kubernetes namespace"
   type        = string

@@ -182,7 +182,17 @@ This repo also includes [DevContainer configuration](./.devcontainer/devcontaine
 
 ## Deploy the app to Azure using Azure Developer CLI
 
-See the [Azure Developer CLI](./docs/azd.md) documentation for instructions on how to quickly deploy the app to Azure.
+After authenticating to Azure and configuring the required AZD environment
+settings, run this from the repository root:
+
+```bash
+azd up
+```
+
+This provisions the Azure infrastructure and deploys the main app to AKS. The
+[Azure Developer CLI guide](./docs/azd.md) covers environment settings and
+optional Azure OpenAI model deployments; the [MCP deployment guide](./mcp-servers/README.md)
+covers the separate MCP, ingress, and Azure Front Door setup.
 
 ## MCP Servers
 

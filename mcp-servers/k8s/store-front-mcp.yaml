@@ -17,7 +17,7 @@ spec:
         "kubernetes.io/os": linux
       containers:
         - name: store-front-mcp
-          image: acrstoredemodevstork70.azurecr.io/aks-store-demo/store-front-mcp:latest
+          image: __ACR_NAME__.azurecr.io/aks-store-demo/store-front-mcp:latest
           ports:
             - containerPort: 8100
               name: mcp

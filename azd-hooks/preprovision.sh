@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 azd config set alpha.aks.helm on
-azd config set alpha.aks.kustomize on
 
 echo "Ensuring providers/features are registered and Azure CLI extensions are installed"
 

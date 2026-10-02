@@ -7,7 +7,8 @@
 # This is a one-shot az/kubectl/helm CLI script (no Terraform) so it can be
 # re-run against a freshly provisioned cluster without touching
 # infra/terraform and risking merge conflicts with upstream
-# Azure-Samples/aks-store-demo. Safe to re-run; every step is idempotent.
+# Azure-Samples/aks-store-demo. It builds the MCP images in the cluster's ACR
+# and resolves that registry dynamically.
 #
 # Usage:
 #   ./deploy-public-access.sh -g <resource-group> -c <cluster-name> \
@@ -48,6 +49,19 @@ fi
 echo "==> Getting AKS credentials for $CLUSTER_NAME"
 az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME" --overwrite-existing
 
+ACR_NAME=$(az acr list --resource-group "$RESOURCE_GROUP" --query '[0].name' -o tsv)
+if [[ -z "$ACR_NAME" ]]; then
+  echo "No Azure Container Registry found in resource group $RESOURCE_GROUP" >&2
+  exit 1
+fi
+echo "    Azure Container Registry: $ACR_NAME"
+
+echo "==> Building MCP server images in $ACR_NAME"
+az acr build --registry "$ACR_NAME" --image aks-store-demo/store-front-mcp:latest \
+  --file "$SCRIPT_DIR/Dockerfile.store-front" "$SCRIPT_DIR"
+az acr build --registry "$ACR_NAME" --image aks-store-demo/store-admin-mcp:latest \
+  --file "$SCRIPT_DIR/Dockerfile.store-admin" "$SCRIPT_DIR"
+
 ###############################################################################
 # 1. Install ingress-nginx (idempotent: helm upgrade --install)
 ###############################################################################
@@ -81,12 +95,13 @@ kubectl create secret generic mcp-auth --namespace "$NAMESPACE" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 ###############################################################################
-# 3. Apply the MCP server deployments + ingress (host substituted with the
-#    live ingress-nginx IP so it works regardless of which cluster/LB this is)
+# 3. Apply the MCP server deployments + ingress (host/IP and ACR substituted
+#    so it works with a fresh cluster)
 ###############################################################################
 echo "==> Applying mcp-servers k8s manifests"
-kubectl apply -f "$SCRIPT_DIR/k8s/store-front-mcp.yaml"
-kubectl apply -f "$SCRIPT_DIR/k8s/store-admin-mcp.yaml"
+for manifest in store-front-mcp.yaml store-admin-mcp.yaml; do
+  sed "s/__ACR_NAME__/$ACR_NAME/g" "$SCRIPT_DIR/k8s/$manifest" | kubectl apply -f -
+done
 sed "s/__INGRESS_IP__/$INGRESS_IP/g" "$SCRIPT_DIR/k8s/ingress.yaml" | kubectl apply -f -
 
 ###############################################################################

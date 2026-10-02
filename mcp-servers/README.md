@@ -175,20 +175,53 @@ Successful responses include relevant data and confirmation messages.
 
 - The store front server maintains an in-memory shopping cart per session
 - The servers communicate with the backend microservices via HTTP APIs
-- AI features require the ai-service to be running and configured with API keys
+- AI features require the ai-service and a configured OpenAI-compatible model;
+  Azure OpenAI authentication uses the AKS workload identity when enabled
 - All monetary values are handled as floats and formatted with appropriate currency symbols
 
 ## Deployment
 
-Container images are built with `Dockerfile.store-front` / `Dockerfile.store-admin`
-and can be built remotely with `az acr build` (no local Docker required):
+### Fresh AKS deployment order
+
+For a fresh environment, first run `azd up` from the repository root to
+provision the AKS infrastructure and deploy the main store application. Make
+sure the `pw-dev` azd environment is selected and its required settings
+(including `AUTH_USERNAME` and `AUTH_PASSWORD`) are configured. To provision
+Azure OpenAI (the model resource used by this app) and enable both text and
+image generation, configure the environment before `azd up`:
 
 ```bash
-az acr build --registry <acr-name> --image aks-store-demo/store-front-mcp:latest \
-  --file mcp-servers/Dockerfile.store-front mcp-servers
-az acr build --registry <acr-name> --image aks-store-demo/store-admin-mcp:latest \
-  --file mcp-servers/Dockerfile.store-admin mcp-servers
+azd env set DEPLOY_AZURE_CONTAINER_REGISTRY true
+azd env set DEPLOY_AZURE_SERVICE_BUS true
+azd env set DEPLOY_AZURE_COSMOSDB true
+azd env set DEPLOY_AZURE_OPENAI true
+azd env set AZURE_OPENAI_LOCATION swedencentral
+azd env set DEPLOY_IMAGE_GENERATION_MODEL true
+azd env set BUILD_CONTAINERS true
+azd env set AUTH_USERNAME admin
+azd env set AUTH_PASSWORD '<choose-a-strong-password>'
+azd up
 ```
+
+The Terraform defaults deploy `gpt-5.4-mini` for product descriptions and
+`gpt-image-2` when image generation is enabled. Azure OpenAI is provisioned
+with local key authentication disabled and the AI service uses AKS workload
+identity. `BUILD_CONTAINERS=true` builds the app images from this checkout into
+the created ACR; without it, azd imports the upstream demo images instead.
+
+`azd up` does not deploy the MCP servers or configure ingress-nginx/Azure Front
+Door. After it completes, build the MCP server images into the same ACR using
+the commands below, then run the one-shot public access script. It builds the MCP images in ACR
+and expects the `pets` namespace and main app Services to already exist. The
+azd predeploy hooks explicitly set the portal Services to `ClusterIP`, so
+those services use the ingress/Front Door path rather than getting separate
+public load balancers.
+
+The public-access script builds the MCP server images from
+`Dockerfile.store-front` / `Dockerfile.store-admin` remotely with `az acr build`
+(no local Docker required), and resolves the ACR created by `azd up`. The
+Kubernetes manifests use an `__ACR_NAME__` placeholder that the script replaces
+with that registry's name.
 
 Kubernetes manifests to run both servers in the same `pets` namespace as the rest
 of the app, wired to the in-cluster backend services, are under
@@ -209,9 +242,10 @@ of the app, wired to the in-cluster backend services, are under
 
 [`deploy-public-access.ps1`](./deploy-public-access.ps1) /
 [`deploy-public-access.sh`](./deploy-public-access.sh) automate everything
-below against a freshly provisioned (or existing) AKS cluster: installing
-ingress-nginx, creating the `mcp-auth` secret, applying the `k8s/` manifests,
-and provisioning the Azure Front Door profile/endpoints. It's plain
+below against a freshly provisioned (or existing) AKS cluster: discovering the
+ACR, building both MCP images, installing ingress-nginx, creating the
+`mcp-auth` secret, applying the `k8s/` manifests, and provisioning the Azure
+Front Door profile/endpoints. It's plain
 `az`/`kubectl`/`helm` CLI — intentionally not Terraform/Bicep, so it can be
 re-run freely without touching [`infra/terraform`](../infra/terraform) or
 risking merge conflicts with upstream. Safe to re-run; every step is
@@ -230,6 +264,8 @@ This creates/updates:
 - The ingress-nginx controller (`ingress-nginx` namespace), discovering its
   public LoadBalancer IP dynamically (it changes on every fresh cluster, so
   nothing is hardcoded).
+- The two MCP images in the ACR found in the AKS resource group; image
+  references are populated dynamically when the manifests are applied.
 - The `mcp-auth` secret in the `pets` namespace, from the credentials you pass in.
 - The `store-front-mcp` / `store-admin-mcp` Deployments+Services and the
   `store-front-mcp` / `store-admin-mcp` / `store-front` Ingress resources
